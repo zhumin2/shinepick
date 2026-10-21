@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>拾光 ShinePick · 产品原型 v1</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='28' fill='%23E89B3C'/%3E%3Ccircle cx='32' cy='32' r='12' fill='%23FAF8F3'/%3E%3C/svg%3E">
+<style>
+/* ============ 设计 token ============ */
+:root{
+  --bg:#FAF8F3;
+  --card:#FFFFFF;
+  --ink:#3A3A3A;
+  --ink-soft:#8A8578;
+  --ink-faint:#B8B2A4;
+  --accent:#E89B3C;
+  --accent-deep:#C97F22;
+  --accent-soft:#F7E3C4;
+  --leaf:#A8B89A;
+  --sky:#A8C5DA;
+  --pink:#E8B5B0;
+  --line:#ECE6D8;
+  --shadow:0 6px 24px rgba(58,58,58,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",system-ui,sans-serif;
+  background:#2C2A26;
+  color:var(--ink);
+  font-size:15px;
+  line-height:1.55;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+}
+/* ============ 手机框 ============ */
+.phone{
+  width:390px;height:844px;
+  background:var(--bg);
+  border-radius:44px;
+  box-shadow:0 30px 80px rgba(0,0,0,.5), inset 0 0 0 10px #1a1916;
+  position:relative;overflow:hidden;
+  display:flex;flex-direction:column;
+}
+@media (max-width:480px){
+  body{padding:0;background:var(--bg)}
+  .phone{width:100%;height:100vh;border-radius:0;box-shadow:none}
+}
+/* ============ 状态栏 ============ */
+.statusbar{
+  height:44px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;font-size:13px;font-weight:600;color:var(--ink);
+}
+.statusbar .icons{display:flex;gap:5px;align-items:center}
+/* ============ 视图容器 ============ */
+.views{flex:1;position:relative;overflow:hidden}
+.view{
+  position:absolute;inset:0;overflow-y:auto;
+  padding:8px 20px 100px;
+  display:none;
+}
+.view.active{display:block;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* ============ 顶部问候 ============ */
+.greet{padding:8px 0 18px}
+.greet .hi{font-size:13px;color:var(--ink-soft);letter-spacing:.5px}
+.greet h1{font-size:24px;font-weight:700;margin-top:4px;letter-spacing:-.3px}
+.greet .sub{font-size:13px;color:var(--ink-soft);margin-top:6px}
+/* ============ 今日打卡主卡 ============ */
+.checkin-card{
+  background:linear-gradient(135deg,#F7E3C4 0%,#FAF8F3 70%);
+  border-radius:20px;padding:20px;
+  margin-bottom:20px;
+  position:relative;overflow:hidden;
+}
+.checkin-card .label{font-size:12px;color:var(--accent-deep);font-weight:600;letter-spacing:1px}
+.checkin-card .num{font-size:44px;font-weight:700;color:var(--ink);margin:6px 0 2px;line-height:1}
+.checkin-card .num small{font-size:14px;font-weight:400;color:var(--ink-soft);margin-left:4px}
+.checkin-card .desc{font-size:13px;color:var(--ink-soft)}
+.checkin-card .circle{
+  position:absolute;right:-30px;top:-30px;width:140px;height:140px;border-radius:50%;
+  background:radial-gradient(circle,#F5D8A8 0%,transparent 70%);
+}
+/* ============ 区块标题 ============ */
+.section-title{
+  display:flex;align-items:baseline;justify-content:space-between;
+  margin:22px 0 12px;
+}
+.section-title h2{font-size:16px;font-weight:700}
+.section-title .more{font-size:12px;color:var(--ink-soft);cursor:pointer}
+/* ============ 同路人横滑 ============ */
+.companion-row{display:flex;gap:10px;overflow-x:auto;margin:0 -20px;padding:0 20px 4px;scrollbar-width:none}
+.companion-row::-webkit-scrollbar{display:none}
+.companion{
+  flex:0 0 130px;background:var(--card);border-radius:16px;padding:12px;
+  box-shadow:var(--shadow);
+}
+.companion .avatar{
+  width:40px;height:40px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;color:#fff;font-weight:600;
+}
+.companion .name{font-size:13px;font-weight:600;margin-top:8px}
+.companion .doing{font-size:11px;color:var(--ink-soft);margin-top:2px;line-height:1.4}
+/* ============ 微光 feed 卡 ============ */
+.feed-card{
+  background:var(--card);border-radius:20px;overflow:hidden;
+  margin-bottom:16px;box-shadow:var(--shadow);
+}
+.feed-card .cover{
+  height:140px;display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.feed-card .cover svg{width:48px;height:48px;opacity:.85}
+.feed-card .meta{
+  display:flex;align-items:center;gap:8px;
+  padding:12px 14px 4px;font-size:12px;color:var(--ink-soft);
+}
+.feed-card .meta .dot{width:3px;height:3px;border-radius:50%;background:var(--ink-faint)}
+.feed-card .body{padding:4px 14px 12px}
+.feed-card .body p{font-size:14px;color:var(--ink);line-height:1.55}
+.feed-card .actions{
+  display:flex;gap:8px;padding:0 14px 14px;
+}
+.act-btn{
+  display:flex;align-items:center;gap:4px;
+  padding:6px 12px;border-radius:999px;border:1px solid var(--line);
+  background:#fff;font-size:12px;color:var(--ink-soft);cursor:pointer;
+  transition:all .15s;
+}
+.act-btn:active,.act-btn.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-deep)}
+.act-btn svg{width:14px;height:14px}
+/* cover 配色 */
+.cov-run{background:linear-gradient(135deg,#F5D8A8,#F0C98A)}
+.cov-read{background:linear-gradient(135deg,#D8E0D0,#B8C8A8)}
+.cov-trip{background:linear-gradient(135deg,#C8DCE8,#A8C5DA)}
+.cov-social{background:linear-gradient(135deg,#F0D0CC,#E8B5B0)}
+.cov-pet{background:linear-gradient(135deg,#F0E4CC,#E8D4A8)}
+/* ============ 发现 Tab ============ */
+.cat-tabs{
+  display:flex;gap:8px;overflow-x:auto;margin:4px -20px 16px;padding:0 20px;scrollbar-width:none;
+}
+.cat-tabs::-webkit-scrollbar{display:none}
+.cat-tab{
+  flex:0 0 auto;padding:8px 14px;border-radius:999px;font-size:13px;
+  background:#fff;color:var(--ink-soft);border:1px solid var(--line);cursor:pointer;
+}
+.cat-tab.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+/* ============ 拾光树 Tab ============ */
+.garden-head{text-align:center;padding:10px 0 6px}
+.garden-head .streak{font-size:13px;color:var(--accent-deep);font-weight:600;letter-spacing:1px}
+.garden-head h1{font-size:22px;font-weight:700;margin-top:4px}
+.garden-canvas{
+  background:var(--card);border-radius:24px;margin:16px 0;padding:20px;
+  box-shadow:var(--shadow);position:relative;height:280px;overflow:hidden;
+}
+.garden-canvas .sky{
+  position:absolute;left:0;right:0;top:0;height:60%;
+  background:linear-gradient(180deg,#FDF6E8 0%,#FAF8F3 100%);
+}
+.garden-canvas .ground{
+  position:absolute;left:0;right:0;bottom:0;height:35%;
+  background:linear-gradient(180deg,#E8E4D2 0%,#D8D4C0 100%);
+}
+.tree{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);width:200px;height:220px}
+.light-dot{
+  position:absolute;width:8px;height:8px;border-radius:50%;
+  background:var(--accent);box-shadow:0 0 12px rgba(232,155,60,.6);
+  animation:glow 2.5s ease-in-out infinite;
+}
+@keyframes glow{0%,100%{opacity:.6}50%{opacity:1}}
+.badge-row{display:flex;gap:10px;overflow-x:auto;margin:0 -20px;padding:0 20px;scrollbar-width:none}
+.badge-row::-webkit-scrollbar{display:none}
+.badge{
+  flex:0 0 90px;background:var(--card);border-radius:14px;padding:14px 8px;text-align:center;
+  box-shadow:var(--shadow);
+}
+.badge .icon{font-size:24px}
+.badge .name{font-size:11px;color:var(--ink-soft);margin-top:6px}
+.badge.locked{opacity:.4}
+.year-progress{
+  background:var(--card);border-radius:16px;padding:16px;margin-top:16px;box-shadow:var(--shadow);
+}
+.year-progress .row{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-soft);margin-bottom:8px}
+.year-progress .bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.year-progress .bar i{display:block;height:100%;width:62%;background:var(--accent);border-radius:3px}
+/* ============ 我的 Tab ============ */
+.profile-head{
+  display:flex;align-items:center;gap:14px;padding:16px 0;
+}
+.profile-head .avatar{
+  width:64px;height:64px;border-radius:50%;
+  background:linear-gradient(135deg,#E89B3C,#C97F22);
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:600;
+}
+.profile-head .name{font-size:18px;font-weight:700}
+.profile-head .bio{font-size:12px;color:var(--ink-soft);margin-top:3px}
+.profile-stats{
+  display:flex;background:var(--card);border-radius:16px;padding:16px 0;
+  box-shadow:var(--shadow);margin:8px 0 16px;
+}
+.profile-stats .cell{flex:1;text-align:center;border-right:1px solid var(--line)}
+.profile-stats .cell:last-child{border-right:none}
+.profile-stats .num{font-size:20px;font-weight:700}
+.profile-stats .lbl{font-size:11px;color:var(--ink-soft);margin-top:2px}
+.list-row{
+  background:var(--card);border-radius:14px;padding:14px 16px;
+  margin-bottom:8px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);
+}
+.list-row .ic{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.list-row .txt{flex:1}
+.list-row .txt .t{font-size:14px;font-weight:500}
+.list-row .txt .s{font-size:11px;color:var(--ink-soft);margin-top:2px}
+/* ============ 底部 Tab ============ */
+.tabbar{
+  position:absolute;left:0;right:0;bottom:0;height:84px;
+  background:#fff;border-top:1px solid var(--line);
+  display:flex;align-items:flex-start;justify-content:space-around;
+  padding-top:10px;z-index:20;
+}
+.tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  cursor:pointer;color:var(--ink-faint);font-size:10px;
+}
+.tab svg{width:22px;height:22px}
+.tab.on{color:var(--accent-deep)}
+.tab-btn{
+  width:56px;height:56px;border-radius:50%;background:var(--accent);
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  margin-top:-28px;box-shadow:0 8px 20px rgba(232,155,60,.4);cursor:pointer;
+  border:4px solid #fff;
+}
+.tab-btn svg{width:24px;height:24px}
+/* ============ 打卡弹层 ============ */
+.sheet-mask{
+  position:absolute;inset:0;background:rgba(40,36,30,.4);z-index:30;
+  opacity:0;pointer-events:none;transition:opacity .25s;
+}
+.sheet-mask.show{opacity:1;pointer-events:auto}
+.sheet{
+  position:absolute;left:0;right:0;bottom:0;background:var(--bg);
+  border-radius:24px 24px 0 0;z-index:31;
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.2,.8,.2,1);
+  padding:20px 20px 30px;max-height:80%;overflow-y:auto;
+}
+.sheet.show{transform:translateY(0)}
+.sheet h3{font-size:16px;font-weight:700;margin-bottom:14px}
+.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.cat-item{
+  background:#fff;border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer;
+  border:1.5px solid transparent;transition:all .15s;
+}
+.cat-item.on{border-color:var(--accent);background:var(--accent-soft)}
+.cat-item .ic{font-size:22px}
+.cat-item .nm{font-size:11px;color:var(--ink-soft);margin-top:4px}
+.input{
+  width:100%;border:1px solid var(--line);border-radius:12px;padding:12px 14px;
+  font-size:15px;background:#fff;font-family:inherit;resize:none;min-height:70px;
+}
+.input:focus{outline:none;border-color:var(--accent)}
+.visibility{display:flex;gap:8px;margin:14px 0}
+.vis-opt{
+  flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);
+  background:#fff;font-size:12px;text-align:center;cursor:pointer;color:var(--ink-soft);
+}
+.vis-opt.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.pub-btn{
+  width:100%;padding:14px;border-radius:14px;background:var(--accent);color:#fff;
+  border:none;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;
+}
+.pub-btn:active{background:var(--accent-deep)}
+/* ============ 成功动画 ============ */
+.success{
+  position:absolute;inset:0;background:rgba(250,248,243,.96);z-index:40;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .3s;
+}
+.success.show{opacity:1;pointer-events:auto}
+.success .dot{
+  width:60px;height:60px;border-radius:50%;background:var(--accent);
+  box-shadow:0 0 40px rgba(232,155,60,.6);
+  animation:dropIn .8s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes dropIn{
+  0%{transform:translateY(-200px) scale(.5);opacity:0}
+  60%{transform:translateY(0) scale(1.1);opacity:1}
+  100%{transform:translateY(0) scale(1)}
+}
+.success h2{margin-top:20px;font-size:20px;font-weight:700}
+.success p{font-size:13px;color:var(--ink-soft);margin-top:6px}
+/* ============ toast ============ */
+.toast{
+  position:absolute;bottom:120px;left:50%;transform:translateX(-50%);
+  background:rgba(58,58,58,.9);color:#fff;padding:10px 18px;border-radius:999px;
+  font-size:13px;z-index:50;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;
+}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <!-- 状态栏 -->
+  <div class="statusbar">
+    <span>21:48</span>
+    <div class="icons">
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="0.5"/><rect x="4" y="5" width="3" height="7" rx="0.5"/><rect x="8" y="2" width="3" height="10" rx="0.5"/><rect x="12" y="0" width="3" height="12" rx="0.5" opacity=".3"/></svg>
+      <svg width="22" height="11" viewBox="0 0 22 11" fill="none"><rect x="0.5" y="0.5" width="18" height="10" rx="2" stroke="currentColor"/><rect x="2" y="2" width="14" height="7" rx="1" fill="currentColor"/><path d="M20 4v3a1.5 1.5 0 000-3z" fill="currentColor"/></svg>
+    </div>
+  </div>
+
+  <!-- 视图区 -->
+  <div class="views">
+
+    <!-- ====== 今日 ====== -->
+    <div class="view active" id="view-home">
+      <div class="greet">
+        <div class="hi">晚上好</div>
+        <h1>今天，拾起了吗？</h1>
+        <div class="sub">不必是大事，跑 3 公里也算。</div>
+      </div>
+
+      <div class="checkin-card">
+        <div class="circle"></div>
+        <div class="label">今日已拾起</div>
+        <div class="num">2<small>/ 想做的 5 件事</small></div>
+        <div class="desc">运动 ✓  ·  阅读 ✓  ·  旅行 ·  社交 ·  宠物</div>
+      </div>
+
+      <div class="section-title">
+        <h2>今天和你同路的人</h2>
+        <span class="more" onclick="showToast('演示版：完整列表敬请期待')">全部 ›</span>
+      </div>
+      <div class="companion-row">
+        <div class="companion">
+          <div class="avatar" style="background:#A8B89A">澈</div>
+          <div class="name">阿澈</div>
+          <div class="doing">今天也在跑步<br>连续第 12 天</div>
+        </div>
+        <div class="companion">
+          <div class="avatar" style="background:#A8C5DA">L</div>
+          <div class="name">Luna</div>
+          <div class="doing">在读《夜晚的潜水艇》<br>今天读了 20 页</div>
+        </div>
+        <div class="companion">
+          <div class="avatar" style="background:#E8B5B0">猫</div>
+          <div class="name">馒头妈</div>
+          <div class="doing">今天和猫待了一下午<br>连续第 30 天</div>
+        </div>
+      </div>
+
+      <div class="section-title">
+        <h2>今日微光</h2>
+        <span class="more" onclick="showToast('演示版：编辑精选每日更新')">编辑精选</span>
+      </div>
+
+      <div class="feed-card">
+        <div class="cover cov-run">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="5" r="2"/><path d="M10 22l2-6-3-3 1-5 4 3 3 2 2 4"/><path d="M6 12l3-2"/></svg>
+        </div>
+        <div class="meta">
+          <span>小杨</span><span class="dot"></span><span>运动</span><span class="dot"></span><span>2 小时前</span>
+        </div>
+        <div class="body"><p>下班跑了 3 公里，江边的风很舒服。今天没白过。</p></div>
+        <div class="actions">
+          <button class="act-btn" onclick="actBtn(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 10l7-7 7 7"/></svg>
+            点亮
+          </button>
+          <button class="act-btn" onclick="actBtn(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-4.5-9-9c-1.5-3.5 1-7 4.5-7 2 0 3.5 1 4.5 2.5C12.5 6 14 5 16 5c3.5 0 6 5 4.5 8-2 4.5-8.5 8-8.5 8z"/></svg>
+            拥抱
+          </button>
+          <button class="act-btn" onclick="actBtn(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>
+            同路
+          </button>
+        </div>
+      </div>
+
+      <div class="feed-card">
+        <div class="cover cov-read">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"><path d="M4 4h7v16H4zM13 4h7v16h-7z"/><path d="M4 4c2-1 5-1 7 1M20 4c-2-1-5-1-7 1"/></svg>
+        </div>
+        <div class="meta">
+          <span>老周</span><span class="dot"></span><span>阅读</span><span class="dot"></span><span>4 小时前</span>
+        </div>
+        <div class="body"><p>翻完了《夜晚的潜水艇》最后一篇。今天的云像故事里的那艘船。</p></div>
+        <div class="actions">
+          <button class="act-btn" onclick="actBtn(this)">点亮</button>
+          <button class="act-btn" onclick="actBtn(this)">拥抱</button>
+          <button class="act-btn" onclick="actBtn(this)">同路</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== 发现 ====== -->
+    <div class="view" id="view-explore">
+      <div class="greet">
+        <h1 style="font-size:22px">发现</h1>
+        <div class="sub">看看别人今天拾起了什么。</div>
+      </div>
+      <div class="cat-tabs">
+        <div class="cat-tab on">全部</div>
+        <div class="cat-tab">运动</div>
+        <div class="cat-tab">阅读</div>
+        <div class="cat-tab">旅行</div>
+        <div class="cat-tab">社交</div>
+        <div class="cat-tab">宠物</div>
+      </div>
+
+      <div class="feed-card">
+        <div class="cover cov-trip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>
+        </div>
+        <div class="meta"><span>阿澈</span><span class="dot"></span><span>旅行</span><span class="dot"></span><span>今天去了东山口</span></div>
+        <div class="body"><p>周末去了一个没去过的咖啡馆，窗外的梧桐刚好落在桌上。</p></div>
+        <div class="actions">
+          <button class="act-btn" onclick="actBtn(this)">点亮</button>
+          <button class="act-btn" onclick="actBtn(this)">拥抱</button>
+          <button class="act-btn" onclick="actBtn(this)">同路</button>
+        </div>
+      </div>
+
+      <div class="feed-card">
+        <div class="cover cov-pet">
+          <svg viewBox="0 0 24 24" fill="#fff"><circle cx="6" cy="10" r="2"/><circle cx="10" cy="7" r="2"/><circle cx="14" cy="7" r="2"/><circle cx="18" cy="10" r="2"/><path d="M12 12c-3 0-5 2-5 4 0 1.7 1.8 2.8 3.5 2.8s2-.6 2-.6.5.6 2 .6 3.5-1 3.5-2.8c0-2-2-4-5-4z"/></svg>
+        </div>
+        <div class="meta"><span>馒头妈</span><span class="dot"></span><span>宠物</span><span class="dot"></span><span>连续第 30 天</span></div>
+        <div class="body"><p>馒头今天第一次玩新玩具，扑了 20 分钟，像个小傻子。</p></div>
+        <div class="actions">
+          <button class="act-btn" onclick="actBtn(this)">点亮</button>
+          <button class="act-btn" onclick="actBtn(this)">拥抱</button>
+          <button class="act-btn" onclick="actBtn(this)">同路</button>
+        </div>
+      </div>
+
+      <div class="feed-card">
+        <div class="cover cov-social">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M14 20c0-2 2-3.5 4-3.5s3 1 3 3"/></svg>
+        </div>
+        <div class="meta"><span>Luna</span><span class="dot"></span><span>社交</span><span class="dot"></span><span>和大学室友</span></div>
+        <div class="body"><p>和毕业三年没见的室友吃了火锅，聊到老板赶人。原来大家都在认真活着。</p></div>
+        <div class="actions">
+          <button class="act-btn" onclick="actBtn(this)">点亮</button>
+          <button class="act-btn" onclick="actBtn(this)">拥抱</button>
+          <button class="act-btn" onclick="actBtn(this)">同路</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== 拾光树 ====== -->
+    <div class="view" id="view-garden">
+      <div class="garden-head">
+        <div class="streak">连续拾起 · 12 天</div>
+        <h1>我的拾光树</h1>
+        <div class="sub" style="font-size:12px;color:var(--ink-soft);margin-top:4px">每打一次卡，树就长大一点。</div>
+      </div>
+
+      <div class="garden-canvas">
+        <div class="sky"></div>
+        <div class="ground"></div>
+        <!-- SVG 树 -->
+        <svg class="tree" viewBox="0 0 200 220">
+          <!-- 树干 -->
+          <path d="M100 210 L95 140 L105 140 L100 210 Z" fill="#8B6F47"/>
+          <path d="M100 160 L70 110 M100 150 L130 100 M100 130 L85 80 M100 130 L115 75" stroke="#8B6F47" stroke-width="5" stroke-linecap="round" fill="none"/>
+          <!-- 树冠 -->
+          <ellipse cx="75" cy="80" rx="40" ry="35" fill="#A8B89A"/>
+          <ellipse cx="125" cy="70" rx="45" ry="40" fill="#B8C8A8"/>
+          <ellipse cx="100" cy="55" rx="40" ry="35" fill="#9AB088"/>
+          <!-- 光点在树冠上 -->
+          <circle cx="80" cy="70" r="4" fill="#E89B3C"/>
+          <circle cx="120" cy="60" r="4" fill="#E89B3C"/>
+          <circle cx="100" cy="45" r="4" fill="#E89B3C"/>
+        </svg>
+        <!-- 地上的光点 -->
+        <div class="light-dot" style="left:30%;bottom:18%"></div>
+        <div class="light-dot" style="left:55%;bottom:12%;animation-delay:.5s"></div>
+        <div class="light-dot" style="left:70%;bottom:22%;animation-delay:1s"></div>
+        <div class="light-dot" style="left:42%;bottom:8%;animation-delay:1.5s"></div>
+      </div>
+
+      <div class="section-title"><h2>我的徽章</h2><span class="more">3 / 12</span></div>
+      <div class="badge-row">
+        <div class="badge"><div class="icon">🌱</div><div class="name">初次拾起</div></div>
+        <div class="badge"><div class="icon">🏃</div><div class="name">连续运动 7 天</div></div>
+        <div class="badge"><div class="icon">📖</div><div class="name">读完 3 本书</div></div>
+        <div class="badge locked"><div class="icon">✈️</div><div class="name">去过 5 个城市</div></div>
+        <div class="badge locked"><div class="icon">🐾</div><div class="name">养猫 100 天</div></div>
+      </div>
+
+      <div class="year-progress">
+        <div class="row"><span>2026 拾光册</span><span>已收集 186 个光点</span></div>
+        <div class="bar"><i></i></div>
+        <div class="row" style="margin-top:8px;margin-bottom:0"><span>年进度 62%</span><span>距年底还有 75 天</span></div>
+      </div>
+    </div>
+
+    <!-- ====== 我的 ====== -->
+    <div class="view" id="view-profile">
+      <div class="profile-head">
+        <div class="avatar">拾</div>
+        <div>
+          <div class="name">拾光用户</div>
+          <div class="bio">认真生活，偶尔记录。</div>
+        </div>
+      </div>
+      <div class="profile-stats">
+        <div class="cell"><div class="num">186</div><div class="lbl">拾光数</div></div>
+        <div class="cell"><div class="num">23</div><div class="lbl">同路人</div></div>
+        <div class="cell"><div class="num">3</div><div class="lbl">徽章</div></div>
+      </div>
+
+      <div class="section-title" style="margin-top:8px"><h2>最近的拾光</h2></div>
+      <div class="list-row">
+        <div class="ic" style="background:var(--accent-soft)">🏃</div>
+        <div class="txt"><div class="t">江边跑了 3 公里</div><div class="s">今天 · 运动 · 仅自己可见</div></div>
+      </div>
+      <div class="list-row">
+        <div class="ic" style="background:#D8E0D0">📖</div>
+        <div class="txt"><div class="t">读完《夜晚的潜水艇》</div><div class="s">昨天 · 阅读 · 同路人可见</div></div>
+      </div>
+      <div class="list-row">
+        <div class="ic" style="background:#F0E4CC">🐾</div>
+        <div class="txt"><div class="t">和猫待了一下午</div><div class="s">3 天前 · 宠物 · 同路人可见</div></div>
+      </div>
+
+      <div class="section-title"><h2>设置</h2></div>
+      <div class="list-row">
+        <div class="ic" style="background:#ECE6D8">🌙</div>
+        <div class="txt"><div class="t">夜间免打扰</div><div class="s">23:00 - 7:00 不推送</div></div>
+      </div>
+      <div class="list-row">
+        <div class="ic" style="background:#ECE6D8">🛡️</div>
+        <div class="txt"><div class="t">情绪安全中心</div><div class="s">举报、屏蔽、内容偏好</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部 Tab -->
+  <div class="tabbar">
+    <div class="tab on" data-view="home" onclick="switchTab(this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8v10a1 1 0 01-1 1h-5v-7h-6v7H4a1 1 0 01-1-1z"/></svg>
+      今日
+    </div>
+    <div class="tab" data-view="explore" onclick="switchTab(this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15 9l-2 5-4 1 2-5z"/></svg>
+      发现
+    </div>
+    <div style="width:56px"></div>
+    <div class="tab" data-view="garden" onclick="switchTab(this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22V8M12 8c-3 0-5-2-5-5 3 0 5 2 5 5M12 8c3 0 5-2 5-5-3 0-5 2-5 5"/><path d="M7 14c-2 1-3 3-3 6M17 14c2 1 3 3 3 6"/></svg>
+      拾光树
+    </div>
+    <div class="tab" data-view="profile" onclick="switchTab(this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+      我的
+    </div>
+  </div>
+
+  <!-- 中间打卡按钮 -->
+  <div class="tab-btn" style="position:absolute;left:50%;bottom:56px;transform:translateX(-50%);z-index:25" onclick="openSheet()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+  </div>
+
+  <!-- 打卡弹层 -->
+  <div class="sheet-mask" id="sheetMask" onclick="closeSheet()"></div>
+  <div class="sheet" id="sheet">
+    <h3>今天，拾起什么？</h3>
+    <div class="cat-grid">
+      <div class="cat-item on"><div class="ic">🏃</div><div class="nm">运动</div></div>
+      <div class="cat-item"><div class="ic">📖</div><div class="nm">阅读</div></div>
+      <div class="cat-item"><div class="ic">✈️</div><div class="nm">旅行</div></div>
+      <div class="cat-item"><div class="ic">👥</div><div class="nm">社交</div></div>
+      <div class="cat-item"><div class="ic">🐾</div><div class="nm">宠物</div></div>
+      <div class="cat-item"><div class="ic">➕</div><div class="nm">自定义</div></div>
+    </div>
+    <textarea class="input" placeholder="一句话记录：今天跑了 3 公里，风很舒服…"></textarea>
+    <div class="visibility">
+      <div class="vis-opt">仅自己</div>
+      <div class="vis-opt on">同路人</div>
+      <div class="vis-opt">小树洞</div>
+    </div>
+    <button class="pub-btn" onclick="publish()">拾起今天</button>
+  </div>
+
+  <!-- 成功动画 -->
+  <div class="success" id="success">
+    <div class="dot"></div>
+    <h2>今日已拾起</h2>
+    <p>这颗光点，会落在你的树下。</p>
+  </div>
+
+  <!-- toast -->
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+function switchTab(el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  const v=el.dataset.view;
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+}
+function openSheet(){
+  document.getElementById('sheetMask').classList.add('show');
+  document.getElementById('sheet').classList.add('show');
+}
+function closeSheet(){
+  document.getElementById('sheetMask').classList.remove('show');
+  document.getElementById('sheet').classList.remove('show');
+}
+function actBtn(btn){
+  btn.classList.toggle('on');
+  showToast(btn.classList.contains('on')?'已送达':'已取消');
+}
+function showToast(t){
+  const el=document.getElementById('toast');
+  el.textContent=t;el.classList.add('show');
+  clearTimeout(window._tt);
+  window._tt=setTimeout(()=>el.classList.remove('show'),1500);
+}
+function publish(){
+  closeSheet();
+  const s=document.getElementById('success');
+  s.classList.add('show');
+  setTimeout(()=>{
+    s.classList.remove('show');
+    showToast('今日已打卡 ✓');
+  },1500);
+}
+// 品类选择
+document.querySelectorAll('.cat-item').forEach(it=>{
+  it.addEventListener('click',()=>{
+    document.querySelectorAll('.cat-item').forEach(x=>x.classList.remove('on'));
+    it.classList.add('on');
+  });
+});
+// 可见范围
+document.querySelectorAll('.vis-opt').forEach(it=>{
+  it.addEventListener('click',()=>{
+    document.querySelectorAll('.vis-opt').forEach(x=>x.classList.remove('on'));
+    it.classList.add('on');
+  });
+});
+// 发现品类 tab
+document.querySelectorAll('.cat-tab').forEach(it=>{
+  it.addEventListener('click',()=>{
+    document.querySelectorAll('.cat-tab').forEach(x=>x.classList.remove('on'));
+    it.classList.add('on');
+  });
+});
+</script>
+</body>
+</html>
