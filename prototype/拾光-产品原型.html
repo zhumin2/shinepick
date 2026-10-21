@@ -270,6 +270,36 @@ body{
   border:none;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;
 }
 .pub-btn:active{background:var(--accent-deep)}
+/* ============ 留言弹层 ============ */
+.comment-sheet{max-height:75%}
+.comment-list{margin-bottom:14px;max-height:300px;overflow-y:auto}
+.comment-item{
+  display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);
+}
+.comment-item:last-child{border-bottom:none}
+.comment-item .c-avatar{
+  width:32px;height:32px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:13px;font-weight:600;
+}
+.comment-item .c-body{flex:1;min-width:0}
+.comment-item .c-name{font-size:12px;color:var(--ink-soft)}
+.comment-item .c-text{font-size:14px;color:var(--ink);margin-top:2px;line-height:1.5}
+.comment-item .c-time{font-size:11px;color:var(--ink-faint);margin-top:3px}
+.comment-input-row{
+  display:flex;gap:8px;align-items:center;
+  border:1px solid var(--line);border-radius:999px;padding:6px 6px 6px 16px;background:#fff;
+}
+.comment-input-row input{
+  flex:1;border:none;outline:none;font-size:14px;background:transparent;font-family:inherit;
+}
+.comment-send{
+  background:var(--accent);color:#fff;border:none;border-radius:999px;
+  padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;
+}
+.comment-send:active{background:var(--accent-deep)}
+.act-btn .count{font-size:11px;margin-left:2px}
+
 /* ============ 成功动画 ============ */
 .success{
   position:absolute;inset:0;background:rgba(250,248,243,.96);z-index:40;
@@ -376,6 +406,10 @@ body{
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>
             同路
           </button>
+          <button class="act-btn" onclick="openComments(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 01-8 8H4l2-3a8 8 0 1115-5z"/></svg>
+            留言
+          </button>
         </div>
       </div>
 
@@ -391,6 +425,7 @@ body{
           <button class="act-btn" onclick="actBtn(this)">点亮</button>
           <button class="act-btn" onclick="actBtn(this)">拥抱</button>
           <button class="act-btn" onclick="actBtn(this)">同路</button>
+          <button class="act-btn" onclick="openComments(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M21 12a8 8 0 01-8 8H4l2-3a8 8 0 1115-5z"/></svg>留言</button>
         </div>
       </div>
     </div>
@@ -420,6 +455,7 @@ body{
           <button class="act-btn" onclick="actBtn(this)">点亮</button>
           <button class="act-btn" onclick="actBtn(this)">拥抱</button>
           <button class="act-btn" onclick="actBtn(this)">同路</button>
+          <button class="act-btn" onclick="openComments(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M21 12a8 8 0 01-8 8H4l2-3a8 8 0 1115-5z"/></svg>留言</button>
         </div>
       </div>
 
@@ -433,6 +469,7 @@ body{
           <button class="act-btn" onclick="actBtn(this)">点亮</button>
           <button class="act-btn" onclick="actBtn(this)">拥抱</button>
           <button class="act-btn" onclick="actBtn(this)">同路</button>
+          <button class="act-btn" onclick="openComments(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M21 12a8 8 0 01-8 8H4l2-3a8 8 0 1115-5z"/></svg>留言</button>
         </div>
       </div>
 
@@ -446,6 +483,7 @@ body{
           <button class="act-btn" onclick="actBtn(this)">点亮</button>
           <button class="act-btn" onclick="actBtn(this)">拥抱</button>
           <button class="act-btn" onclick="actBtn(this)">同路</button>
+          <button class="act-btn" onclick="openComments(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M21 12a8 8 0 01-8 8H4l2-3a8 8 0 1115-5z"/></svg>留言</button>
         </div>
       </div>
     </div>
@@ -586,6 +624,17 @@ body{
     <button class="pub-btn" onclick="publish()">拾起今天</button>
   </div>
 
+  <!-- 留言弹层 -->
+  <div class="sheet-mask" id="commentMask" onclick="closeComments()"></div>
+  <div class="sheet comment-sheet" id="commentSheet">
+    <h3 id="commentTitle">留言</h3>
+    <div class="comment-list" id="commentList"></div>
+    <div class="comment-input-row">
+      <input type="text" id="commentInput" placeholder="写一句温柔的话…" maxlength="80">
+      <button class="comment-send" onclick="sendComment()">发送</button>
+    </div>
+  </div>
+
   <!-- 成功动画 -->
   <div class="success" id="success">
     <div class="dot"></div>
@@ -631,6 +680,80 @@ function publish(){
     s.classList.remove('show');
     showToast('今日已打卡 ✓');
   },1500);
+}
+// ============ 留言功能 ============
+const MOCK_COMMENTS = [
+  [ // 小杨 · 运动
+    {n:'阿澈',c:'#A8B89A',t:'江边跑步真的舒服，我明天也去',time:'1 小时前'},
+    {n:'Luna',c:'#A8C5DA',t:'3 公里也是跑！风是最好的奖励',time:'2 小时前'},
+    {n:'老周',c:'#E8B5B0',t:'看完想去跑个步了',time:'3 小时前'}
+  ],
+  [ // 老周 · 阅读
+    {n:'阿澈',c:'#A8B89A',t:'这本书我也看过，最后一篇看完愣了好久',time:'2 小时前'},
+    {n:'小杨',c:'#E89B3C',t:'马上下单',time:'3 小时前'}
+  ],
+  [ // 阿澈 · 旅行
+    {n:'Luna',c:'#A8C5DA',t:'东山口那家梧桐咖啡馆我去过！靠窗位要抢',time:'3 小时前'},
+    {n:'馒头妈',c:'#E8B5B0',t:'周末也想去，求店名',time:'5 小时前'},
+    {n:'老周',c:'#A8B89A',t:'这种不期而遇的下午最好了',time:'6 小时前'}
+  ],
+  [ // 馒头妈 · 宠物
+    {n:'Luna',c:'#A8C5DA',t:'云吸猫成功！！',time:'1 小时前'},
+    {n:'阿澈',c:'#A8B89A',t:'小傻子本傻哈哈哈哈',time:'2 小时前'},
+    {n:'小杨',c:'#E89B3C',t:'好想被馒头蹭一下',time:'4 小时前'}
+  ],
+  [ // Luna · 社交
+    {n:'老周',c:'#A8B89A',t:'毕业三年还能聊到老板赶人，是真朋友',time:'2 小时前'},
+    {n:'馒头妈',c:'#E8B5B0',t:'火锅 + 老朋友 = 最好的夜晚',time:'4 小时前'}
+  ]
+];
+let currentPostIdx = 0;
+function openComments(btn){
+  const cards = document.querySelectorAll('.feed-card');
+  const card = btn.closest('.feed-card');
+  currentPostIdx = Array.from(cards).indexOf(card);
+  const list = document.getElementById('commentList');
+  const data = MOCK_COMMENTS[currentPostIdx] || [];
+  list.innerHTML = data.map(c => `
+    <div class="comment-item">
+      <div class="c-avatar" style="background:${c.c}">${c.n[0]}</div>
+      <div class="c-body">
+        <div class="c-name">${c.n}</div>
+        <div class="c-text">${c.t}</div>
+        <div class="c-time">${c.time}</div>
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('commentSheet').dataset.draft = '';
+  document.getElementById('commentMask').classList.add('show');
+  document.getElementById('commentSheet').classList.add('show');
+  setTimeout(()=>document.getElementById('commentInput').focus(),300);
+}
+function closeComments(){
+  document.getElementById('commentMask').classList.remove('show');
+  document.getElementById('commentSheet').classList.remove('show');
+}
+function sendComment(){
+  const input = document.getElementById('commentInput');
+  const text = input.value.trim();
+  if(!text){ showToast('先写点什么吧'); return; }
+  const list = document.getElementById('commentList');
+  const html = `
+    <div class="comment-item">
+      <div class="c-avatar" style="background:#E89B3C">拾</div>
+      <div class="c-body">
+        <div class="c-name">我</div>
+        <div class="c-text"></div>
+        <div class="c-time">刚刚</div>
+      </div>
+    </div>`;
+  // 用 textContent 防 XSS
+  const wrap = document.createElement('div');
+  wrap.innerHTML = html;
+  wrap.querySelector('.c-text').textContent = text;
+  list.insertBefore(wrap.firstElementChild, list.firstChild);
+  input.value = '';
+  showToast('已发送');
 }
 // 品类选择
 document.querySelectorAll('.cat-item').forEach(it=>{

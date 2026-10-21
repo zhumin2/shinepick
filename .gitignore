@@ -1,5 +1,6 @@
 # 截图自检产物
 prototype/_shots/
+_shots/
 
 # 系统/编辑器
 .DS_Store
