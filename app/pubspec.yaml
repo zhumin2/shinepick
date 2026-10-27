@@ -1,0 +1,28 @@
+name: shinepick
+description: 拾光 ShinePick - 记录正向日常的社交 App
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # 网络
+  dio: ^5.4.0
+  # 本地存储
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  # 状态管理
+  provider: ^6.1.1
+  # 路由
+  go_router: ^13.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

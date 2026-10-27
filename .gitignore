@@ -11,3 +11,17 @@ Thumbs.db
 # 临时
 *.log
 *.tmp
+
+# Go
+server/api
+server/api.exe
+server/tidy_err.txt
+server/coverage.out
+
+# Flutter / Dart
+app/build/
+app/.dart_tool/
+app/.flutter-plugins*
+app/*.iml
+app/android/.gradle/
+app/ios/Pods/
