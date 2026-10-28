@@ -1,0 +1,70 @@
+{
+  "info": {
+    "name": "拾光 ShinePick API",
+    "description": "S1 MVP 冒烟测试集合。dev 环境验证码固定打印在服务端日志（mock）。",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "健康检查",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/ping",
+        "description": "期望 code=0，data.pong=true"
+      }
+    },
+    {
+      "name": "发送验证码",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"phone\": \"13800138000\" }"
+        },
+        "url": "{{base_url}}/api/v1/auth/sms-code",
+        "description": "期望 code=0。60s 内重复请求返回 4001。"
+      }
+    },
+    {
+      "name": "登录（首次自动注册）",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"phone\": \"13800138000\", \"code\": \"123456\" }"
+        },
+        "url": "{{base_url}}/api/v1/auth/login",
+        "description": "期望返回 access_token / refresh_token / user。验证码错 5 次返回 3001。"
+      }
+    },
+    {
+      "name": "刷新 Token",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"refresh_token\": \"{{refresh_token}}\" }"
+        },
+        "url": "{{base_url}}/api/v1/auth/refresh",
+        "description": "期望返回新的双 Token（轮换，旧 refresh 立即失效）。"
+      }
+    },
+    {
+      "name": "获取当前用户（需登录）",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+        "url": "{{base_url}}/api/v1/me",
+        "description": "期望 code=0 返回用户信息；无 token 返回 2001。"
+      }
+    }
+  ],
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8080" },
+    { "key": "access_token", "value": "" },
+    { "key": "refresh_token", "value": "" }
+  ]
+}
