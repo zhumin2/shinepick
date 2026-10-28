@@ -1,12 +1,15 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive/hive.dart';
 
 import 'package:shinepick/core/error/app_error.dart';
 import 'package:shinepick/core/network/api_client.dart';
 
 void main() {
   setUpAll(() async {
-    await Hive.initFlutter();
+    final dir = await Directory.systemTemp.createTemp('shinepick_test');
+    Hive.init(dir.path);
   });
 
   test('业务错误码映射为 AppError', () {

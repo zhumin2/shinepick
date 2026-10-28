@@ -17,7 +17,7 @@ class AppTheme {
       colorScheme: ColorScheme.fromSeed(
         seedColor: primary,
         primary: primary,
-        background: bg,
+        surface: bg,
       ),
     );
     return base.copyWith(
@@ -65,7 +65,7 @@ class AppTheme {
           borderSide: const BorderSide(color: primary, width: 1.5),
         ),
       ),
-      cardTheme: CardThemeData(
+      cardTheme: CardTheme(
         color: card,
         elevation: 0,
         shape: RoundedRectangleBorder(

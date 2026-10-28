@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 /// 统一业务错误。code 与后端错误码一致。
 class AppError implements Exception {
   final int code;

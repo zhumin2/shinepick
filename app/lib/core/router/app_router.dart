@@ -1,10 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../features/auth/auth_controller.dart';
-import '../features/auth/login_page.dart';
-import '../features/home/home_page.dart';
+import '../../features/auth/auth_controller.dart';
+import '../../features/auth/login_page.dart';
+import '../../features/home/home_page.dart';
 
 /// 应用路由：未登录 → 登录页；已登录 → 首页。
 class AppRouter {

@@ -44,7 +44,7 @@ class AuthController extends ChangeNotifier {
     try {
       await _api.post('/auth/sms-code', data: {'phone': phone});
       _startCooldown(60);
-    } on AppError catch (e) {
+    } on AppError {
       rethrow;
     } finally {
       _sendingCode = false;

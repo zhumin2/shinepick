@@ -1,12 +1,15 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive/hive.dart';
 
 import 'package:shinepick/shared/models/user.dart';
 import 'package:shinepick/shared/storage/token_store.dart';
 
 void main() {
   setUpAll(() async {
-    await Hive.initFlutter();
+    final dir = await Directory.systemTemp.createTemp('shinepick_test');
+    Hive.init(dir.path);
   });
 
   test('TokenStore 保存与读取', () async {
