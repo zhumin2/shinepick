@@ -30,7 +30,7 @@ class HomePage extends StatelessWidget {
               width: 88,
               height: 88,
               decoration: BoxDecoration(
-                color: AppTheme.primary.withOpacity(0.12),
+                color: AppTheme.primary.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.auto_awesome,

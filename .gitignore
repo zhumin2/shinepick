@@ -25,3 +25,6 @@ app/.flutter-plugins*
 app/*.iml
 app/android/.gradle/
 app/ios/Pods/
+
+# Android 构建产物
+app/android/build/
