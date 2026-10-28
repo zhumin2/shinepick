@@ -51,10 +51,6 @@ func connectDB(cfg *config.Config) (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	if cfg.AppEnv != "prod" {
-		// 非生产环境自动迁移（仅建表，不动数据）
-		_ = db.AutoMigrate()
-	}
 	sqlDB, err := db.DB()
 	if err != nil {
 		return nil, err
