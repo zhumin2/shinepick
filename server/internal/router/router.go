@@ -8,8 +8,7 @@ import (
 	"shinepick/internal/config"
 	"shinepick/internal/middleware"
 	"shinepick/internal/module/auth"
-	"shinepick/internal/pkg/code"
-	"shinepick/internal/pkg/httpx"
+	"shinepick/internal/module/user"
 	"shinepick/internal/pkg/jwt"
 	"shinepick/internal/pkg/sms"
 	"shinepick/internal/repository"
@@ -25,15 +24,11 @@ func Register(e *gin.Engine, db *gorm.DB, rdb *redis.Client, cfg *config.Config)
 	authSvc := service.NewAuthService(db, rdb, jm, sms.NewSender(cfg.SMSType), repo)
 	auth.NewHandler(authSvc).Register(api)
 
-	// 需要登录的接口示例（S2 起扩展）：GET /api/v1/me
+	// 登录态接口
 	authed := api.Group("", middleware.Auth(jm))
-	authed.GET("/me", func(c *gin.Context) {
-		uid := c.GetInt64("uid")
-		u, err := repo.ByID(c, uid)
-		if err != nil {
-			httpx.Fail(c, code.ErrNotFound)
-			return
-		}
-		httpx.OK(c, gin.H{"id": u.ID, "nickname": u.Nickname, "avatar_url": u.AvatarURL})
-	})
+	userSvc := service.NewUserService(repo, cfg.UploadDir, cfg.PublicBaseURL)
+	user.NewHandler(userSvc).Register(authed)
+
+	// 静态资源（dev 本地驱动上传的文件；生产换 OSS + CDN）
+	e.Static("/static", cfg.UploadDir)
 }

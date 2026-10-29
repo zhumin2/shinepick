@@ -4,14 +4,16 @@ import "os"
 
 // Config 服务配置，全部来自环境变量，密钥不入仓库。
 type Config struct {
-	AppEnv       string // dev / staging / prod
-	Port         string
-	DBDSN        string
-	RedisAddr    string
+	AppEnv        string // dev / staging / prod
+	Port          string
+	DBDSN         string
+	RedisAddr     string
 	RedisPassword string
-	JWTSecret    string
-	RefreshTTL   string // 如 720h
-	SMSType      string // mock / aliyun
+	JWTSecret     string
+	RefreshTTL    string // 如 720h
+	SMSType       string // mock / aliyun
+	UploadDir     string // 上传文件根目录（dev 本地驱动）
+	PublicBaseURL string // 对外基础 URL（拼接静态资源链接）
 }
 
 func Load() *Config {
@@ -24,6 +26,8 @@ func Load() *Config {
 		JWTSecret:     getenv("JWT_SECRET", "dev-secret-change-me"),
 		RefreshTTL:    getenv("REFRESH_TTL", "720h"),
 		SMSType:       getenv("SMS_TYPE", "mock"),
+		UploadDir:     getenv("UPLOAD_DIR", "./uploads"),
+		PublicBaseURL: getenv("PUBLIC_BASE_URL", "http://127.0.0.1:8080"),
 	}
 }
 

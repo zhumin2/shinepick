@@ -46,3 +46,8 @@ func (r *UserRepo) ByID(ctx context.Context, id int64) (*model.User, error) {
 	}
 	return &u, nil
 }
+
+// UpdateFields 按脏字段更新（map 形式避开 GORM 结构体零值跳过问题）。
+func (r *UserRepo) UpdateFields(ctx context.Context, id int64, fields map[string]interface{}) error {
+	return r.db.WithContext(ctx).Model(&model.User{}).Where("id = ?", id).Updates(fields).Error
+}
