@@ -26,6 +26,10 @@ void main() {
     Hive.init(tmp.path);
     final seed = TokenStore();
     await seed.init();
+    // 预开 feed/draft 盒子：testWidgets 是 fake-async 环境，
+    // 盒内真实 IO 不会完成；预开后 openBox 走已打开的快速路径。
+    await Hive.openBox('feed_cache');
+    await Hive.openBox('draft');
     await AuthBox.save(
       accessToken: 'at_test',
       refreshToken: 'rt_test',

@@ -279,7 +279,7 @@ func toCheckinVO(c *model.Checkin) *CheckinVO {
 		VideoURL:    c.VideoURL,
 		Visibility:  c.Visibility,
 		Extra:       json.RawMessage(c.Extra),
-		CheckinDate: c.CheckinDate,
+		CheckinDate: dateOnly(c.CheckinDate),
 		CreatedAt:   c.CreatedAt,
 	}
 }

@@ -3,13 +3,13 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../shared/models/checkin.dart';
 import '../../shared/widgets/feed_card.dart';
 import '../auth/auth_controller.dart';
 import '../checkin/checkin_controller.dart';
 import '../checkin/checkin_sheet.dart';
 
-/// 今日页（S3-07）：问候语 + 今日已拾起卡 + 近期打卡列表 + 中央"+"打卡。
-/// S4 接 Feed（同路人流/今日微光）与光点动画完整版。
+/// 今日页（S4-03）：问候 + 今日卡 + 同品类横滑 + 今日微光 + 我的拾光。
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -24,12 +24,22 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     final c = context.read<CheckinController>();
-    Future.microtask(c.load);
+    Future.microtask(() async {
+      await c.load();
+      await c.loadFeed();
+    });
+  }
+
+  Future<void> _refreshAll() async {
+    final c = context.read<CheckinController>();
+    await c.load();
+    await c.loadFeed();
   }
 
   Future<void> _openCheckinSheet() async {
     final published = await CheckinSheet.show(context);
     if (published && mounted) {
+      await _refreshAll();
       setState(() => _celebrating = true);
       Future.delayed(const Duration(milliseconds: 900), () {
         if (mounted) setState(() => _celebrating = false);
@@ -69,7 +79,7 @@ class _HomePageState extends State<HomePage> {
         children: [
           RefreshIndicator(
             color: AppTheme.primary,
-            onRefresh: () => checkin.load(),
+            onRefresh: _refreshAll,
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
               children: [
@@ -82,76 +92,72 @@ class _HomePageState extends State<HomePage> {
                 const Text('拾起生活里的小光阴',
                     style: TextStyle(fontSize: 13, color: AppTheme.textSub)),
                 const SizedBox(height: 16),
-                // 今日已拾起
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.primary.withValues(alpha: 0.14),
-                        AppTheme.primary.withValues(alpha: 0.05),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                _TodayCard(todayCount: checkin.todayCount),
+                const SizedBox(height: 16),
+                if (checkin.feedOffline)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                        color: AppTheme.primary.withValues(alpha: 0.25)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.wb_sunny_outlined,
-                          color: AppTheme.primary, size: 34),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              checkin.todayCount > 0
-                                  ? '今天已拾起 ${checkin.todayCount} 束光'
-                                  : '今天你还没打卡，要拾起一点光阴吗？',
-                              style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.textMain),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text('每打卡一次，你的拾光树就多一颗光点',
-                                style: TextStyle(
-                                    fontSize: 12, color: AppTheme.textSub)),
-                          ],
+                    child: const Row(
+                      children: [
+                        Icon(Icons.wifi_off, size: 15, color: AppTheme.textSub),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text('网络未连接，展示最近的内容',
+                              style: TextStyle(
+                                  fontSize: 12, color: AppTheme.textSub)),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                // 近期打卡
+                // 同路人横滑：今天也在打卡的陌生人（S4-03）
+                if (checkin.doing.isNotEmpty) ...[
+                  const _SectionTitle('今天也在打卡的人'),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 132,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: checkin.doing.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 10),
+                      itemBuilder: (_, i) =>
+                          _DoingCard(item: checkin.doing[i]),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+                // 今日微光
+                if (checkin.dailySelected.isNotEmpty) ...[
+                  const _SectionTitle('今日微光'),
+                  const SizedBox(height: 10),
+                  for (final item in checkin.dailySelected)
+                    FeedCard(
+                      checkin: item.checkin,
+                      nickname: item.user.nickname,
+                      onAction: (_) {},
+                    ),
+                  const SizedBox(height: 8),
+                ],
+                // 我的拾光
+                const _SectionTitle('我的拾光'),
+                const SizedBox(height: 10),
                 if (checkin.loading && checkin.items.isEmpty)
                   const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 48),
+                    padding: EdgeInsets.symmetric(vertical: 32),
                     child: Center(
                         child: CircularProgressIndicator(color: AppTheme.primary)),
                   )
                 else if (checkin.items.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 48),
-                    child: Column(
-                      children: [
-                        Icon(Icons.auto_awesome,
-                            size: 40,
-                            color: AppTheme.textSub.withValues(alpha: 0.5)),
-                        const SizedBox(height: 12),
-                        const Text('还没有打卡记录',
-                            style: TextStyle(
-                                fontSize: 14, color: AppTheme.textSub)),
-                        const SizedBox(height: 4),
-                        const Text('点下方的 +，拾起今天的第一束光',
-                            style: TextStyle(
-                                fontSize: 12, color: AppTheme.textSub)),
-                      ],
-                    ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Text('点下方的 +，拾起今天的第一束光',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 13, color: AppTheme.textSub)),
                   )
                 else
                   for (final c in checkin.items)
@@ -159,7 +165,6 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-          // 光点落下动画（S4-04 完整版，S3 先做仪式感最小实现）
           if (_celebrating) const _LightDrop(),
         ],
       ),
@@ -176,7 +181,143 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-/// 发布成功后的光点落下动画（800ms，对齐原型 drop-in）。
+class _SectionTitle extends StatelessWidget {
+  final String text;
+  const _SectionTitle(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(text,
+        style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textMain));
+  }
+}
+
+class _TodayCard extends StatelessWidget {
+  final int todayCount;
+  const _TodayCard({required this.todayCount});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.primary.withValues(alpha: 0.14),
+            AppTheme.primary.withValues(alpha: 0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.wb_sunny_outlined, color: AppTheme.primary, size: 34),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  todayCount > 0
+                      ? '今天已拾起 $todayCount 束光'
+                      : '今天你还没打卡，要拾起一点光阴吗？',
+                  style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textMain),
+                ),
+                const SizedBox(height: 4),
+                const Text('每打卡一次，你的拾光树就多一颗光点',
+                    style: TextStyle(fontSize: 12, color: AppTheme.textSub)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 同品类横滑卡（对齐原型："今天也在运动的 3 个陌生人"）。
+class _DoingCard extends StatelessWidget {
+  final FeedItem item;
+  const _DoingCard({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final cat = item.checkin.categoryEnum ?? CheckinCategory.sport;
+    return Container(
+      width: 200,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 12,
+                backgroundColor: cat.color.withValues(alpha: 0.15),
+                child: Text(
+                  item.user.nickname.isEmpty
+                      ? '光'
+                      : item.user.nickname.characters.first,
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: cat.color,
+                      fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  item.user.nickname,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textMain),
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: cat.color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(cat.label,
+                    style: TextStyle(fontSize: 10, color: cat.color)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: Text(
+              item.checkin.content,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  fontSize: 12, height: 1.5, color: AppTheme.textSub),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 发布成功后的光点落下动画（S4-04：800ms 落下 + 光晕呼吸）。
 class _LightDrop extends StatefulWidget {
   const _LightDrop();
 
@@ -189,6 +330,7 @@ class _LightDropState extends State<_LightDrop>
   late final AnimationController _ctrl;
   late final Animation<double> _fall;
   late final Animation<double> _fade;
+  late final Animation<double> _glow;
 
   @override
   void initState() {
@@ -202,6 +344,13 @@ class _LightDropState extends State<_LightDrop>
         curve: const Interval(0.6, 1, curve: Curves.easeIn),
       ),
     );
+    // 光晕呼吸：落下过程中两轮脉冲
+    _glow = TweenSequence<double>([
+      TweenSequenceItem(
+          tween: Tween(begin: 0.4, end: 0.9), weight: 50),
+      TweenSequenceItem(
+          tween: Tween(begin: 0.9, end: 0.4), weight: 50),
+    ]).animate(_ctrl);
     _ctrl.forward();
   }
 
@@ -230,9 +379,10 @@ class _LightDropState extends State<_LightDrop>
                 color: AppTheme.primary.withValues(alpha: 0.9),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.primary.withValues(alpha: 0.5),
+                    color: AppTheme.primary
+                        .withValues(alpha: 0.5 * _glow.value),
                     blurRadius: 24,
-                    spreadRadius: 6,
+                    spreadRadius: 6 + 6 * _glow.value,
                   ),
                 ],
               ),

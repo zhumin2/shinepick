@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../core/error/app_error.dart';
 import '../../shared/models/checkin.dart';
@@ -21,7 +23,7 @@ class PublishCheckinReq {
   });
 }
 
-/// 打卡状态（S3-05/S3-07）。
+/// 打卡状态（S3-05/S3-07；S4 加 Feed 与草稿）。
 class CheckinController extends ChangeNotifier {
   final AuthController auth;
 
@@ -29,11 +31,24 @@ class CheckinController extends ChangeNotifier {
   bool _loading = false;
   bool _publishing = false;
 
+  // S4: Feed 状态
+  List<FeedItem> _dailySelected = [];
+  List<FeedItem> _doing = [];
+  bool _feedLoading = false;
+  bool _feedOffline = false;
+
+  static const _feedBox = 'feed_cache';
+  static const _draftBox = 'draft';
+
   CheckinController(this.auth);
 
   List<Checkin> get items => List.unmodifiable(_items);
   bool get loading => _loading;
   bool get publishing => _publishing;
+  List<FeedItem> get dailySelected => List.unmodifiable(_dailySelected);
+  List<FeedItem> get doing => List.unmodifiable(_doing);
+  bool get feedLoading => _feedLoading;
+  bool get feedOffline => _feedOffline;
 
   /// 今日打卡数（按 checkin_date 东八区归属日）。
   int get todayCount {
@@ -118,6 +133,90 @@ class CheckinController extends ChangeNotifier {
     await auth.api.delete('/checkins/$id');
     _items.removeWhere((c) => c.id == id);
     notifyListeners();
+  }
+
+  /// 拉取首页 Feed（GET /feed）。
+  /// 弱网/断网时回退到上次缓存（S4-06），页面提示"展示最近内容"。
+  Future<void> loadFeed() async {
+    _feedLoading = true;
+    _feedOffline = false;
+    notifyListeners();
+    try {
+      final data = await auth.api.get<Map<String, dynamic>>(
+        '/feed',
+        parser: (d) => Map<String, dynamic>.from(d as Map),
+      );
+      _dailySelected = _parseFeedItems(data['daily_selected']);
+      _doing = _parseFeedItems(data['doing']);
+      await _saveFeedCache();
+    } catch (_) {
+      final cached = await _readFeedCache();
+      if (cached != null) {
+        _dailySelected = cached.$1;
+        _doing = cached.$2;
+        _feedOffline = true;
+      }
+    } finally {
+      _feedLoading = false;
+      notifyListeners();
+    }
+  }
+
+  List<FeedItem> _parseFeedItems(dynamic raw) =>
+      (raw as List<dynamic>? ?? const [])
+          .map((e) => FeedItem.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+
+  Future<void> _saveFeedCache() async {
+    try {
+      final box = await Hive.openBox(_feedBox);
+      await box.put('v1', jsonEncode({
+        'daily_selected': _dailySelected.map((e) => e.toJson()).toList(),
+        'doing': _doing.map((e) => e.toJson()).toList(),
+      }));
+    } catch (_) {
+      // 缓存失败不影响主流程
+    }
+  }
+
+  Future<(List<FeedItem>, List<FeedItem>)?> _readFeedCache() async {
+    try {
+      final box = await Hive.openBox(_feedBox);
+      final raw = box.get('v1') as String?;
+      if (raw == null) return null;
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      return (
+        _parseFeedItems(data['daily_selected']),
+        _parseFeedItems(data['doing']),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ---- 打卡草稿（S4-06：断网/退出弹层不丢内容） ----
+
+  Future<void> saveDraft(String content) async {
+    try {
+      final box = await Hive.openBox(_draftBox);
+      await box.put('checkin', content);
+    } catch (_) {}
+  }
+
+  Future<String> readDraft() async {
+    try {
+      final box = await Hive.openBox(_draftBox);
+      return box.get('checkin') as String? ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  Future<void> clearDraft() async {
+    try {
+      final box = await Hive.openBox(_draftBox);
+      await box.delete('checkin');
+    } catch (_) {}
   }
 
   String _clientToken() =>

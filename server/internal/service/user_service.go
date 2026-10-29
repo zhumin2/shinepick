@@ -86,6 +86,9 @@ func normalizeDate(d string) string {
 	return d
 }
 
+// dateOnly normalizeDate 的同义别名，供其他 service 文件使用。
+func dateOnly(d string) string { return normalizeDate(d) }
+
 // computeStreak 由去重打卡日期计算 打卡总天数 与 连续天数。
 // 连续天数：从今天往前数连续打卡的天数；今天未打卡不扣断（当日尚未结束），
 // 从昨天开始数。输入顺序不敏感（内部降序排序）。

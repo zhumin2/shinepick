@@ -53,7 +53,25 @@ class _CheckinSheetState extends State<CheckinSheet> {
   };
 
   @override
+  void initState() {
+    super.initState();
+    // 恢复草稿（S4-06：上次没发出去的内容不丢）
+    Future.microtask(() async {
+      final draft = await _checkin.readDraft();
+      if (draft.isNotEmpty && mounted && _content.text.isEmpty) {
+        _content.text = draft;
+      }
+    });
+    _content.addListener(_onContentChanged);
+  }
+
+  void _onContentChanged() {
+    _checkin.saveDraft(_content.text); // 即时保存，无需防抖（本地写很快）
+  }
+
+  @override
   void dispose() {
+    _content.removeListener(_onContentChanged);
     _content.dispose();
     super.dispose();
   }
@@ -110,11 +128,12 @@ class _CheckinSheetState extends State<CheckinSheet> {
         imageUrls: List.unmodifiable(_imageUrls),
         visibility: _visibility,
       ));
+      await _checkin.clearDraft();
       if (mounted) Navigator.of(context).pop(true);
     } on AppError catch (e) {
       if (mounted) Toast.show(context, e.message);
     } catch (_) {
-      if (mounted) Toast.show(context, '发布失败，请重试');
+      if (mounted) Toast.show(context, '发布失败，请重试（内容已存草稿）');
     }
   }
 

@@ -99,3 +99,56 @@ func (r *CheckinRepo) DistinctDates(ctx context.Context, uid int64, limit int) (
 		Pluck("checkin_date", &dates).Error
 	return dates, err
 }
+
+// CheckinWithUser 打卡 + 作者信息（Feed/发现页用）。
+type CheckinWithUser struct {
+	model.Checkin
+	Nickname  string `json:"nickname"`
+	AvatarURL string `json:"avatar_url"`
+}
+
+const withUserSelect = "`checkins`.*, `users`.`nickname` AS `nickname`, `users`.`avatar_url` AS `avatar_url`"
+
+// ListTodayPublicByCategory 当天某品类的同路人可见打卡（含作者），排除指定用户，新→旧。
+func (r *CheckinRepo) ListTodayPublicByCategory(ctx context.Context, date string, category int8, excludeUID int64, limit int) ([]*CheckinWithUser, error) {
+	var list []*CheckinWithUser
+	err := r.db.WithContext(ctx).Model(&model.Checkin{}).
+		Select(withUserSelect).
+		Joins("JOIN `users` ON `users`.`id` = `checkins`.`user_id`").
+		Where("checkins.checkin_date = ? AND checkins.category = ? AND checkins.visibility = 2 AND checkins.status = 0 AND checkins.user_id <> ?",
+			date, category, excludeUID).
+		Order("checkins.id DESC").
+		Limit(limit).
+		Find(&list).Error
+	return list, err
+}
+
+// ListDailyCandidates 每日精选候选：日期内同路人可见打卡（含作者），新→旧。
+func (r *CheckinRepo) ListDailyCandidates(ctx context.Context, date string, limit int) ([]*CheckinWithUser, error) {
+	var list []*CheckinWithUser
+	err := r.db.WithContext(ctx).Model(&model.Checkin{}).
+		Select(withUserSelect).
+		Joins("JOIN `users` ON `users`.`id` = `checkins`.`user_id`").
+		Where("checkins.checkin_date = ? AND checkins.visibility = 2 AND checkins.status = 0", date).
+		Order("checkins.id DESC").
+		Limit(limit).
+		Find(&list).Error
+	return list, err
+}
+
+// ListExplore 发现页：按品类（0=全部）游标分页，同路人可见。
+func (r *CheckinRepo) ListExplore(ctx context.Context, category int8, cursor int64, limit int) ([]*CheckinWithUser, error) {
+	q := r.db.WithContext(ctx).Model(&model.Checkin{}).
+		Select(withUserSelect).
+		Joins("JOIN `users` ON `users`.`id` = `checkins`.`user_id`").
+		Where("checkins.visibility = 2 AND checkins.status = 0")
+	if category > 0 {
+		q = q.Where("checkins.category = ?", category)
+	}
+	if cursor > 0 {
+		q = q.Where("checkins.id < ?", cursor)
+	}
+	var list []*CheckinWithUser
+	err := q.Order("checkins.id DESC").Limit(limit).Find(&list).Error
+	return list, err
+}

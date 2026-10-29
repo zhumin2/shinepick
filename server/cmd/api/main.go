@@ -33,7 +33,7 @@ func main() {
 		httpx.OK(c, gin.H{"pong": true, "env": cfg.AppEnv})
 	})
 
-	router.Register(e, db, rdb, cfg)
+	router.Register(context.Background(), e, db, rdb, cfg)
 
 	log.Printf("shinepick api listening on :%s (env=%s)", cfg.Port, cfg.AppEnv)
 	if err := e.Run(":" + cfg.Port); err != nil {

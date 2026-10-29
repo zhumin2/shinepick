@@ -73,5 +73,57 @@ class Checkin {
     );
   }
 
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'user_id': userId,
+        'category': category,
+        'content': content,
+        'image_urls': imageUrls,
+        'visibility': visibility,
+        'checkin_date': checkinDate,
+        'created_at': createdAt?.toIso8601String(),
+      };
+
   CheckinCategory? get categoryEnum => CheckinCategory.byCode(category);
+}
+
+/// Feed 条目作者信息。
+class FeedUser {
+  final int id;
+  final String nickname;
+  final String avatarUrl;
+
+  const FeedUser({
+    required this.id,
+    required this.nickname,
+    this.avatarUrl = '',
+  });
+
+  factory FeedUser.fromJson(Map<String, dynamic> json) => FeedUser(
+        id: (json['id'] as num).toInt(),
+        nickname: json['nickname'] as String? ?? '',
+        avatarUrl: json['avatar_url'] as String? ?? '',
+      );
+
+  Map<String, dynamic> toJson() =>
+      {'id': id, 'nickname': nickname, 'avatar_url': avatarUrl};
+}
+
+/// Feed 条目（今日微光 / 同品类打卡的陌生人 / 发现页）。
+class FeedItem {
+  final Checkin checkin;
+  final FeedUser user;
+
+  const FeedItem({required this.checkin, required this.user});
+
+  factory FeedItem.fromJson(Map<String, dynamic> json) => FeedItem(
+        checkin: Checkin.fromJson(json),
+        user: FeedUser.fromJson(
+            Map<String, dynamic>.from(json['user'] as Map? ?? const {})),
+      );
+
+  Map<String, dynamic> toJson() => {
+        ...checkin.toJson(),
+        'user': user.toJson(),
+      };
 }
