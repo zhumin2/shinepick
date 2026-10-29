@@ -7,9 +7,11 @@ import '../../features/home/home_page.dart';
 
 /// 应用路由：未登录 → 登录页；已登录 → 首页。
 class AppRouter {
-  static GoRouter createRouter() {
+  /// [auth] 接入 refreshListenable：登录态变化时重新执行 redirect。
+  static GoRouter createRouter(AuthController auth) {
     return GoRouter(
       initialLocation: '/login',
+      refreshListenable: auth,
       redirect: (context, state) {
         final auth = context.read<AuthController>();
         final loggingIn = state.matchedLocation == '/login';

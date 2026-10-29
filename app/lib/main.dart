@@ -30,7 +30,7 @@ class ShinePickApp extends StatelessWidget {
       child: MaterialApp.router(
         title: '拾光 ShinePick',
         theme: AppTheme.light(),
-        routerConfig: AppRouter.createRouter(),
+        routerConfig: AppRouter.createRouter(authController),
       ),
     );
   }
