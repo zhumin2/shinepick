@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import 'package:shinepick/core/router/app_router.dart';
 import 'package:shinepick/features/auth/auth_controller.dart';
+import 'package:shinepick/features/checkin/checkin_controller.dart';
 import 'package:shinepick/shared/models/user.dart';
 import 'package:shinepick/shared/storage/token_store.dart';
 
@@ -43,8 +44,11 @@ void main() {
     expect(auth.status, AuthStatus.authenticated, reason: '预置后应为已登录态');
 
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: auth,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: auth),
+          ChangeNotifierProvider.value(value: CheckinController(auth)),
+        ],
         child: MaterialApp.router(
           routerConfig: AppRouter.createRouter(auth),
         ),
@@ -53,7 +57,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('你好，pig'), findsOneWidget, reason: '已登录应进入首页');
+    expect(find.textContaining('pig'), findsWidgets,
+        reason: '已登录应进入首页（问候语含昵称）');
 
     // 点 AppBar 的退出登录按钮
     await tester.tap(find.byTooltip('退出登录'));
@@ -62,7 +67,7 @@ void main() {
 
     expect(auth.status, AuthStatus.unauthenticated, reason: '退出后状态应为未登录');
     expect(find.text('登录 / 注册'), findsOneWidget, reason: '应回到登录页');
-    expect(find.text('你好，pig'), findsNothing, reason: '首页应已卸载');
+    expect(find.textContaining('pig'), findsNothing, reason: '首页应已卸载');
   });
 
   testWidgets('首页 push 进入我的页，返回按钮可回到首页', (tester) async {
@@ -70,8 +75,11 @@ void main() {
     await auth.restore();
 
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: auth,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: auth),
+          ChangeNotifierProvider.value(value: CheckinController(auth)),
+        ],
         child: MaterialApp.router(
           routerConfig: AppRouter.createRouter(auth),
         ),
@@ -79,7 +87,8 @@ void main() {
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('今天，拾点什么好？'), findsOneWidget);
+    expect(find.text('拾起生活里的小光阴'), findsOneWidget,
+        reason: '应进入首页');
 
     // 从首页进入我的页（同 HomePage 的 onPressed 路径）
     final ctx = tester.element(find.byTooltip('我的'));
@@ -92,6 +101,6 @@ void main() {
     await tester.tap(find.byTooltip('返回'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('今天，拾点什么好？'), findsOneWidget, reason: '返回应回到首页');
+    expect(find.text('拾起生活里的小光阴'), findsOneWidget, reason: '返回应回到首页');
   });
 }

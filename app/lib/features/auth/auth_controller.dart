@@ -21,6 +21,7 @@ class AuthController extends ChangeNotifier {
   User? get user => _user;
   bool get sendingCode => _sendingCode;
   int get cooldownSeconds => _cooldownSeconds;
+  ApiClient get api => _api;
 
   AuthController(this._tokenStore) : _api = ApiClient(_tokenStore);
 

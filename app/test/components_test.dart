@@ -37,7 +37,7 @@ void main() {
     expect(tapped, 1);
   });
 
-  testWidgets('FeedCard 渲染品类与连续天数，互动回调触发', (tester) async {
+  testWidgets('FeedCard 渲染品类与互动回调触发', (tester) async {
     final actions = <String>[];
     await tester.pumpWidget(MaterialApp(
       theme: AppTheme.light(),
@@ -45,15 +45,14 @@ void main() {
         body: ListView(
           children: [
             FeedCard(
-              checkin: const CheckinVO(
+              checkin: const Checkin(
                 id: 1,
                 userId: 2,
-                nickname: 'pig',
-                category: CheckinCategory.sport,
+                category: 1,
                 content: '今天跑了 3 公里，江边的风很舒服。',
-                timeLabel: '21:30',
-                streakDays: 12,
+                checkinDate: '2026-10-30',
               ),
+              nickname: 'pig',
               onAction: actions.add,
             ),
           ],
@@ -61,7 +60,7 @@ void main() {
       ),
     ));
     expect(find.text('pig'), findsOneWidget);
-    expect(find.textContaining('连续 12 天'), findsOneWidget);
+    expect(find.text('同路人'), findsOneWidget);
     expect(find.textContaining('今天跑了 3 公里'), findsOneWidget);
     await tester.tap(find.text('点亮'));
     expect(actions, contains('light'));

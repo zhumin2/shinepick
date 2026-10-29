@@ -119,6 +119,15 @@ class ApiClient {
     return _unwrap<T>(resp, parser);
   }
 
+  /// DELETE 请求并解包统一响应。
+  Future<T> delete<T>(
+    String path, {
+    T Function(dynamic)? parser,
+  }) async {
+    final resp = await dio.delete<Map<String, dynamic>>(path);
+    return _unwrap<T>(resp, parser);
+  }
+
   /// multipart 文件上传（字段名默认 file）。
   Future<T> upload<T>(
     String path,
