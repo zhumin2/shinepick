@@ -15,6 +15,7 @@ Thumbs.db
 # Go
 server/api
 server/api.exe
+server/bin/
 server/tidy_err.txt
 server/coverage.out
 
