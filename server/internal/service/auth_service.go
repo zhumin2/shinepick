@@ -60,6 +60,9 @@ func (s *AuthService) SendSmsCode(ctx context.Context, phone string) error {
 		return ErrFrequent
 	}
 	codeVal := fmt.Sprintf("%06d", mathrand.Intn(1000000))
+	if s.sms.IsMock() {
+		codeVal = "123456" // dev 固定验证码，便于联调（S1 计划 §3.1）
+	}
 	if err := s.rdb.Set(ctx, "sms:"+phone, codeVal, smsTTL).Err(); err != nil {
 		return err
 	}

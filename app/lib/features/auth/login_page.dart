@@ -32,7 +32,7 @@ class _LoginPageState extends State<LoginPage> {
     }
     try {
       await auth.sendSmsCode(phone);
-      _toast('验证码已发送（dev 环境请查服务端日志）');
+      _toast('验证码已发送（dev 固定验证码 123456）');
     } on AppError catch (e) {
       _toast(e.message);
     } catch (_) {

@@ -11,6 +11,9 @@ func NewSender(smsType string) *Sender {
 	return &Sender{smsType: smsType}
 }
 
+// IsMock 是否 mock 通道（dev 固定验证码，见 S1 计划 §3.1）。
+func (s *Sender) IsMock() bool { return s.smsType != "aliyun" }
+
 func (s *Sender) Send(phone, code string) error {
 	switch s.smsType {
 	case "aliyun":
