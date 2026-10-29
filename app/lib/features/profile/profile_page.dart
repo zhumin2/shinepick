@@ -23,6 +23,20 @@ class _ProfilePageState extends State<ProfilePage> {
 
   AuthController get _auth => context.read<AuthController>();
 
+  @override
+  void initState() {
+    super.initState();
+    // 打开我的页即拉最新资料（统计随打卡变化，缓存可能过期）
+    final auth = _auth;
+    Future.microtask(() async {
+      try {
+        await auth.refreshProfile();
+      } catch (_) {
+        // 弱网时静默使用缓存
+      }
+    });
+  }
+
   Future<void> _changeAvatar() async {
     if (_uploading) return;
     // file_picker 13.x：FilePickerPlatform.instance（返回文件列表）
@@ -140,7 +154,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
             const SizedBox(height: 20),
-            // 统计骨架（S3 打卡/连续、S5 同路人接入真实数据）
+            // 统计（打卡天数/连续天数来自 /users/me；同路人 S5 上线）
             Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
@@ -148,14 +162,17 @@ class _ProfilePageState extends State<ProfilePage> {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppTheme.divider),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _StatItem(value: '0', label: '打卡'),
-                  _VerticalDivider(),
-                  _StatItem(value: '0', label: '连续天数'),
-                  _VerticalDivider(),
-                  _StatItem(value: '0', label: '同路人'),
+                  _StatItem(
+                      value: '${u?.checkinDays ?? 0}', label: '打卡天数'),
+                  const _VerticalDivider(),
+                  _StatItem(
+                      value: '${u?.streakDays ?? 0}', label: '连续天数'),
+                  const _VerticalDivider(),
+                  _StatItem(
+                      value: '${u?.companions ?? 0}', label: '同路人'),
                 ],
               ),
             ),

@@ -82,12 +82,16 @@ void main() {
       'city': '杭州',
       'birthday': '2000-01-01',
       'is_minor': false,
+      'stats': {'checkin_days': 5, 'streak_days': 3, 'companions': 0},
     });
     expect(merged.phoneMasked, '139****0001', reason: '掩码手机号应保留');
     expect(merged.bio, '认真生活');
     expect(merged.city, '杭州');
     expect(merged.birthday, '2000-01-01');
     expect(merged.isMinor, isFalse);
-    expect(merged.toCacheJson()['bio'], '认真生活', reason: '缓存应含资料字段');
+    expect(merged.checkinDays, 5, reason: 'stats.checkin_days 应透传');
+    expect(merged.streakDays, 3, reason: 'stats.streak_days 应透传');
+    expect(merged.companions, 0);
+    expect(merged.toCacheJson()['checkin_days'], 5, reason: '缓存应含统计字段');
   });
 }

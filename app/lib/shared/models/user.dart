@@ -14,6 +14,11 @@ class User {
   final String? birthday; // YYYY-MM-DD
   final bool isMinor;
 
+  /// S3 打卡统计（/users/me 的 stats；登录接口无此数据）
+  final int checkinDays;
+  final int streakDays;
+  final int companions;
+
   const User({
     required this.id,
     required this.nickname,
@@ -24,6 +29,9 @@ class User {
     this.city = '',
     this.birthday,
     this.isMinor = false,
+    this.checkinDays = 0,
+    this.streakDays = 0,
+    this.companions = 0,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -37,6 +45,9 @@ class User {
       city: json['city'] as String? ?? '',
       birthday: json['birthday'] as String?,
       isMinor: parseMinor(json['is_minor']),
+      checkinDays: (json['checkin_days'] as num?)?.toInt() ?? 0,
+      streakDays: (json['streak_days'] as num?)?.toInt() ?? 0,
+      companions: (json['companions'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -49,6 +60,7 @@ class User {
 
   /// 合并资料接口返回（保留登录侧的掩码手机号）。
   User mergeProfile(Map<String, dynamic> json) {
+    final stats = json['stats'] as Map<String, dynamic>?;
     return User(
       id: id,
       nickname: json['nickname'] as String? ?? nickname,
@@ -59,6 +71,10 @@ class User {
       city: json['city'] as String? ?? '',
       birthday: json['birthday'] as String?,
       isMinor: parseMinor(json['is_minor']),
+      checkinDays:
+          (stats?['checkin_days'] as num?)?.toInt() ?? checkinDays,
+      streakDays: (stats?['streak_days'] as num?)?.toInt() ?? streakDays,
+      companions: (stats?['companions'] as num?)?.toInt() ?? companions,
     );
   }
 
@@ -72,6 +88,9 @@ class User {
         'city': city,
         'birthday': birthday,
         'is_minor': isMinor ? 1 : 0,
+        'checkin_days': checkinDays,
+        'streak_days': streakDays,
+        'companions': companions,
       };
 }
 

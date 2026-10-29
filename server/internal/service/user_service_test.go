@@ -153,3 +153,33 @@ func TestAvatarExtWhitelist(t *testing.T) {
 		}
 	}
 }
+
+// S3 统计：打卡天数与连续天数（今天未打卡不断签，从昨天起算）。
+func TestComputeStreak(t *testing.T) {
+	now, _ := time.ParseInLocation("2006-01-02", "2026-10-30", cstZone)
+	cases := []struct {
+		name             string
+		dates            []string
+		wantDays, wantSt int
+	}{
+		{"无打卡", []string{}, 0, 0},
+		{"仅今天", []string{"2026-10-30"}, 1, 1},
+		{"今天断了但昨天有", []string{"2026-10-29"}, 1, 1},
+		{"三天前打卡已断签", []string{"2026-10-27"}, 1, 0},
+		{"今天+昨天", []string{"2026-10-30", "2026-10-29"}, 2, 2},
+		{"昨天+前天（今天未打不断签）", []string{"2026-10-29", "2026-10-28"}, 2, 2},
+		{"今天+隔一天断裂", []string{"2026-10-30", "2026-10-28", "2026-10-27"}, 3, 1},
+		{"连续 5 天", []string{"2026-10-30", "2026-10-29", "2026-10-28", "2026-10-27", "2026-10-26"}, 5, 5},
+		{"乱序输入也安全", []string{"2026-10-27", "2026-10-30", "2026-10-29", "2026-10-28"}, 4, 4},
+		{"RFC3339 全格式归一化", []string{"2026-10-30T00:00:00+08:00", "2026-10-29T00:00:00+08:00"}, 2, 2},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			days, st := computeStreak(c.dates, now)
+			if days != c.wantDays || st != c.wantSt {
+				t.Fatalf("computeStreak(%v) = (%d, %d), want (%d, %d)",
+					c.dates, days, st, c.wantDays, c.wantSt)
+			}
+		})
+	}
+}

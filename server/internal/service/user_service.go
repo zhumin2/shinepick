@@ -8,6 +8,7 @@ import (
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -25,7 +26,7 @@ type ProfilePatch struct {
 	Birthday *string `json:"birthday"` // YYYY-MM-DD
 }
 
-// UserStats 统计骨架（S3 打卡、S5 同路人上线后填充真实值）。
+// UserStats 我的页统计（companions 在 S5 同路人上线后填充）。
 type UserStats struct {
 	CheckinDays int `json:"checkin_days"`
 	StreakDays  int `json:"streak_days"`
@@ -46,24 +47,81 @@ type ProfileVO struct {
 	Stats       *UserStats `json:"stats,omitempty"`
 }
 
-// UserService 用户资料（S2-01/S2-02）。
+// UserService 用户资料（S2-01/S2-02；S3 起统计含打卡数据）。
 type UserService struct {
-	repo         *repository.UserRepo
-	uploadDir    string // 头像存储根目录（dev 本地驱动）
-	publicBase   string // 对外可访问的基础 URL（拼接头像链接）
+	repo       *repository.UserRepo
+	checkins   *repository.CheckinRepo
+	uploadDir  string // 头像存储根目录（dev 本地驱动）
+	publicBase string // 对外可访问的基础 URL（拼接头像链接）
 }
 
-func NewUserService(repo *repository.UserRepo, uploadDir, publicBase string) *UserService {
-	return &UserService{repo: repo, uploadDir: uploadDir, publicBase: publicBase}
+func NewUserService(repo *repository.UserRepo, checkins *repository.CheckinRepo, uploadDir, publicBase string) *UserService {
+	return &UserService{repo: repo, checkins: checkins, uploadDir: uploadDir, publicBase: publicBase}
 }
 
-// Profile 返回我的资料（含统计骨架）。
+// Profile 返回我的资料（含打卡统计）。
 func (s *UserService) Profile(ctx context.Context, uid int64) (*ProfileVO, error) {
 	u, err := s.repo.ByID(ctx, uid)
 	if err != nil {
 		return nil, err
 	}
-	return toProfileVO(u, &UserStats{}), nil
+	stats := &UserStats{}
+	if s.checkins != nil {
+		dates, err := s.checkins.DistinctDates(ctx, uid, 400)
+		if err == nil { // 统计查询失败不阻塞资料返回
+			checkinDays, streakDays := computeStreak(dates, time.Now().In(cstZone))
+			stats.CheckinDays = checkinDays
+			stats.StreakDays = streakDays
+		}
+	}
+	return toProfileVO(u, stats), nil
+}
+
+// normalizeDate 归一日期字符串：兼容 "2006-01-02" 与 parseTime 扫描出的
+// RFC3339 全格式（DATE 列经 database/sql 转 string 会带时间与时区）。
+func normalizeDate(d string) string {
+	if len(d) >= 10 {
+		return d[:10]
+	}
+	return d
+}
+
+// computeStreak 由去重打卡日期计算 打卡总天数 与 连续天数。
+// 连续天数：从今天往前数连续打卡的天数；今天未打卡不扣断（当日尚未结束），
+// 从昨天开始数。输入顺序不敏感（内部降序排序）。
+func computeStreak(dates []string, now time.Time) (checkinDays, streakDays int) {
+	checkinDays = len(dates)
+	if checkinDays == 0 {
+		return 0, 0
+	}
+	sorted := make([]string, 0, len(dates))
+	for _, d := range dates {
+		sorted = append(sorted, normalizeDate(d))
+	}
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i] > sorted[j] })
+
+	today := now.Format("2006-01-02")
+	yesterday := now.AddDate(0, 0, -1).Format("2006-01-02")
+
+	expected := today
+	if sorted[0] != today {
+		if sorted[0] != yesterday {
+			return checkinDays, 0
+		}
+		expected = yesterday
+	}
+	for _, d := range sorted {
+		if d != expected {
+			break
+		}
+		streakDays++
+		t, err := time.ParseInLocation("2006-01-02", expected, cstZone)
+		if err != nil {
+			break
+		}
+		expected = t.AddDate(0, 0, -1).Format("2006-01-02")
+	}
+	return checkinDays, streakDays
 }
 
 // UpdateProfile 校验并落库资料变更，返回更新后的资料。

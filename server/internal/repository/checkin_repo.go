@@ -87,3 +87,15 @@ func (r *CheckinRepo) TreeByUser(ctx context.Context, uid int64) (*model.TreePro
 	}
 	return &t, true, nil
 }
+
+// DistinctDates 用户有打卡的日期（去重，新→旧），供资料页统计。
+func (r *CheckinRepo) DistinctDates(ctx context.Context, uid int64, limit int) ([]string, error) {
+	var dates []string
+	err := r.db.WithContext(ctx).Model(&model.Checkin{}).
+		Where("user_id = ? AND status = 0", uid).
+		Distinct("checkin_date").
+		Order("checkin_date DESC").
+		Limit(limit).
+		Pluck("checkin_date", &dates).Error
+	return dates, err
+}

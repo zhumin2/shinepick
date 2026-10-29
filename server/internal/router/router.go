@@ -29,10 +29,10 @@ func Register(e *gin.Engine, db *gorm.DB, rdb *redis.Client, cfg *config.Config)
 
 	// 登录态接口
 	authed := api.Group("", middleware.Auth(jm))
-	userSvc := service.NewUserService(repo, cfg.UploadDir, cfg.PublicBaseURL)
+	checkinRepo := repository.NewCheckinRepo(db)
+	userSvc := service.NewUserService(repo, checkinRepo, cfg.UploadDir, cfg.PublicBaseURL)
 	user.NewHandler(userSvc).Register(authed)
 
-	checkinRepo := repository.NewCheckinRepo(db)
 	checkinSvc := service.NewCheckinService(
 		checkinRepo, repo, rdb,
 		audit.New(cfg.AuditType, cfg.AuditRemoteURL, nil),
