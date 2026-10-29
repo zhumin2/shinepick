@@ -62,7 +62,9 @@ class _ProfilePageState extends State<ProfilePage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-          onPressed: () => context.pop(),
+          tooltip: '返回',
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/home'),
         ),
         title: const Text('我的'),
         actions: [

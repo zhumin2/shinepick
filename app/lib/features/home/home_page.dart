@@ -19,7 +19,7 @@ class HomePage extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.person_outline, color: AppTheme.textSub),
             tooltip: '我的',
-            onPressed: () => context.go('/profile'),
+            onPressed: () => context.push('/profile'),
           ),
           IconButton(
             icon: const Icon(Icons.logout, color: AppTheme.textSub),

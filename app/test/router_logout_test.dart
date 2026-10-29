@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hive/hive.dart';
 import 'package:provider/provider.dart';
 
@@ -62,5 +63,35 @@ void main() {
     expect(auth.status, AuthStatus.unauthenticated, reason: '退出后状态应为未登录');
     expect(find.text('登录 / 注册'), findsOneWidget, reason: '应回到登录页');
     expect(find.text('你好，pig'), findsNothing, reason: '首页应已卸载');
+  });
+
+  testWidgets('首页 push 进入我的页，返回按钮可回到首页', (tester) async {
+    final auth = AuthController(_NoWriteStore());
+    await auth.restore();
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: auth,
+        child: MaterialApp.router(
+          routerConfig: AppRouter.createRouter(auth),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('今天，拾点什么好？'), findsOneWidget);
+
+    // 从首页进入我的页（同 HomePage 的 onPressed 路径）
+    final ctx = tester.element(find.byTooltip('我的'));
+    ctx.push('/profile');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('我的'), findsOneWidget, reason: '应进入我的页');
+
+    // 点返回应回到首页（回归：go() 平级替换导致栈底无页可 pop）
+    await tester.tap(find.byTooltip('返回'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('今天，拾点什么好？'), findsOneWidget, reason: '返回应回到首页');
   });
 }
