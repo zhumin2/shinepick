@@ -109,6 +109,30 @@ class ApiClient {
     return _unwrap<T>(resp, parser);
   }
 
+  /// PATCH 请求并解包统一响应。
+  Future<T> patch<T>(
+    String path, {
+    Object? data,
+    T Function(dynamic)? parser,
+  }) async {
+    final resp = await dio.patch<Map<String, dynamic>>(path, data: data);
+    return _unwrap<T>(resp, parser);
+  }
+
+  /// multipart 文件上传（字段名默认 file）。
+  Future<T> upload<T>(
+    String path,
+    String filePath, {
+    String field = 'file',
+    T Function(dynamic)? parser,
+  }) async {
+    final form = FormData.fromMap({
+      field: await MultipartFile.fromFile(filePath),
+    });
+    final resp = await dio.post<Map<String, dynamic>>(path, data: form);
+    return _unwrap<T>(resp, parser);
+  }
+
   T _unwrap<T>(Response<Map<String, dynamic>> resp, T Function(dynamic)? parser) {
     final body = ApiResponse.fromJson(resp.data!, parser);
     if (!body.ok) {

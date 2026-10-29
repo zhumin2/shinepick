@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../auth/auth_controller.dart';
 
-/// 首页占位（S2 实现打卡流）。
+/// 首页占位（S3 实现打卡流）。
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
@@ -15,6 +16,11 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('拾光'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.person_outline, color: AppTheme.textSub),
+            tooltip: '我的',
+            onPressed: () => context.go('/profile'),
+          ),
           IconButton(
             icon: const Icon(Icons.logout, color: AppTheme.textSub),
             tooltip: '退出登录',

@@ -71,6 +71,45 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 拉取最新资料（GET /users/me），同步本地缓存（S2-06）。
+  Future<void> refreshProfile() async {
+    final data = await _api.get<Map<String, dynamic>>(
+      '/users/me',
+      parser: (d) => Map<String, dynamic>.from(d as Map),
+    );
+    final user = _user?.mergeProfile(data) ?? User.fromJson(data);
+    _user = user;
+    await AuthBox.save(
+      accessToken: await _tokenStore.readAccessToken() ?? '',
+      refreshToken: await _tokenStore.readRefreshToken() ?? '',
+      user: user,
+    );
+    notifyListeners();
+  }
+
+  /// 局部更新资料（PATCH /users/me），成功后同步缓存。
+  Future<void> updateProfile(Map<String, dynamic> patch) async {
+    final data = await _api.patch<Map<String, dynamic>>(
+      '/users/me',
+      data: patch,
+      parser: (d) => Map<String, dynamic>.from(d as Map),
+    );
+    final user = _user?.mergeProfile(data) ?? User.fromJson(data);
+    _user = user;
+    await AuthBox.save(
+      accessToken: await _tokenStore.readAccessToken() ?? '',
+      refreshToken: await _tokenStore.readRefreshToken() ?? '',
+      user: user,
+    );
+    notifyListeners();
+  }
+
+  /// 上传头像（POST /users/me/avatar），成功后拉取最新资料回显。
+  Future<void> uploadAvatar(String filePath) async {
+    await _api.upload<Map<String, dynamic>>( '/users/me/avatar', filePath);
+    await refreshProfile();
+  }
+
   Future<void> logout() async {
     await _tokenStore.clear();
     _user = null;
