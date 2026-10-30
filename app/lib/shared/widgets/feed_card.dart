@@ -81,30 +81,34 @@ class FeedCard extends StatelessWidget {
                           color: AppTheme.textMain)),
                   if (c.imageUrls.isNotEmpty) ...[
                     const SizedBox(height: 10),
-                    SizedBox(
-                      height: 76,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: c.imageUrls.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 8),
-                        itemBuilder: (_, i) => ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Image.network(
-                            c.imageUrls[i],
-                            width: 76,
-                            height: 76,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
+                    // 单图：全宽完整显示；多图：宫格缩略（对齐主流内容流惯例）
+                    if (c.imageUrls.length == 1)
+                      _FullImage(url: c.imageUrls.first)
+                    else
+                      SizedBox(
+                        height: 76,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: c.imageUrls.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 8),
+                          itemBuilder: (_, i) => ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(
+                              c.imageUrls[i],
                               width: 76,
                               height: 76,
-                              color: AppTheme.bg,
-                              child: const Icon(Icons.broken_image_outlined,
-                                  color: AppTheme.textSub, size: 20),
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 76,
+                                height: 76,
+                                color: AppTheme.bg,
+                                child: const Icon(Icons.broken_image_outlined,
+                                    color: AppTheme.textSub, size: 20),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
                   ],
                   const SizedBox(height: 8),
                   Row(
@@ -160,5 +164,33 @@ extension on Checkin {
       default:
         return '同路人';
     }
+  }
+}
+
+/// 单图全宽完整显示（最大高度 360 超出按 contain 完整可见，不裁切）。
+class _FullImage extends StatelessWidget {
+  final String url;
+  const _FullImage({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 360),
+        child: Image.network(
+          url,
+          width: double.infinity,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => Container(
+            height: 120,
+            color: AppTheme.bg,
+            alignment: Alignment.center,
+            child: const Icon(Icons.broken_image_outlined,
+                color: AppTheme.textSub, size: 28),
+          ),
+        ),
+      ),
+    );
   }
 }
