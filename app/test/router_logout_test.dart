@@ -85,11 +85,21 @@ void main() {
     expect(find.text('设置'), findsOneWidget, reason: '我的页有设置入口');
 
     await tester.pump(const Duration(milliseconds: 200));
-    await tester.tap(find.text('设置'));
+    await tester.tap(find.byIcon(Icons.settings_outlined));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('夜间免打扰'), findsOneWidget, reason: '进入设置页');
 
+    // 回归（S6）：push 进入的子页可返回（go() 平级替换导致无页可 pop 的老坑）
+    await tester.tap(find.byTooltip('返回'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('打卡次数'), findsOneWidget, reason: '返回应回到我的页');
+
+    // 重新进设置页执行退出
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text('退出登录'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));

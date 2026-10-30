@@ -222,7 +222,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             fontSize: 15, color: AppTheme.textMain)),
                     trailing: const Icon(Icons.chevron_right,
                         size: 18, color: AppTheme.textSub),
-                    onTap: () => context.go('/notifications'),
+                    onTap: () => context.push('/notifications'),
                   ),
                   const Divider(height: 1, indent: 16, color: AppTheme.divider),
                   ListTile(
@@ -233,7 +233,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             fontSize: 15, color: AppTheme.textMain)),
                     trailing: const Icon(Icons.chevron_right,
                         size: 18, color: AppTheme.textSub),
-                    onTap: () => context.go('/settings'),
+                    onTap: () => context.push('/settings'),
                   ),
                 ],
               ),
