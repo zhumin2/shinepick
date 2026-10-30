@@ -68,6 +68,7 @@ type CheckinVO struct {
 	Extra       json.RawMessage `json:"extra,omitempty"`
 	CheckinDate string          `json:"checkin_date"`
 	CreatedAt   time.Time       `json:"created_at"`
+	MyReactions []int8          `json:"my_reactions,omitempty"` // 当前观众已点的互动类型（S5 按钮态）
 }
 
 // PublishResult 发布结果（含树联动数据）。
@@ -115,15 +116,7 @@ func (s *CheckinService) Create(ctx context.Context, uid int64, req *CreateCheck
 		return nil, ErrCheckinReject
 	}
 
-	// 3. 频控：单用户 1 分钟 3 条
-	rlKey := fmt.Sprintf("rl:ck:%d", uid)
-	if n, _ := s.rdb.Incr(ctx, rlKey).Result(); n == 1 {
-		s.rdb.Expire(ctx, rlKey, checkinWindow)
-	} else if n > checkinWindowMax {
-		return nil, ErrCheckinFrequent
-	}
-
-	// 4. 幂等：client_token 重复提交返回首次结果
+	// 3. 幂等优先：client_token 重复提交返回首次结果（弱网重试不该被频控误拦）
 	var idemKey string
 	if req.ClientToken != "" {
 		idemKey = fmt.Sprintf("idem:ck:%d:%s", uid, req.ClientToken)
@@ -140,6 +133,17 @@ func (s *CheckinService) Create(ctx context.Context, uid int64, req *CreateCheck
 			}
 			return nil, ErrCheckinFrequent // 兜底：极短窗口内并发重复
 		}
+	}
+
+	// 4. 频控：单用户 1 分钟 3 条（仅对非重放请求计数）
+	rlKey := fmt.Sprintf("rl:ck:%d", uid)
+	if n, _ := s.rdb.Incr(ctx, rlKey).Result(); n == 1 {
+		s.rdb.Expire(ctx, rlKey, checkinWindow)
+	} else if n > checkinWindowMax {
+		if idemKey != "" {
+			s.rdb.Del(ctx, idemKey) // 释放占位，避免重放被锁死
+		}
+		return nil, ErrCheckinFrequent
 	}
 
 	// 5. 事务：insert checkin + 树联动

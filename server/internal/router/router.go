@@ -12,6 +12,7 @@ import (
 	"shinepick/internal/module/auth"
 	"shinepick/internal/module/checkin"
 	"shinepick/internal/module/feed"
+	"shinepick/internal/module/interaction"
 	"shinepick/internal/module/upload"
 	"shinepick/internal/module/user"
 	"shinepick/internal/pkg/audit"
@@ -33,20 +34,23 @@ func Register(ctx context.Context, e *gin.Engine, db *gorm.DB, rdb *redis.Client
 	// 登录态接口
 	authed := api.Group("", middleware.Auth(jm))
 	checkinRepo := repository.NewCheckinRepo(db)
-	userSvc := service.NewUserService(repo, checkinRepo, cfg.UploadDir, cfg.PublicBaseURL)
+	interRepo := repository.NewInteractionRepo(db)
+	aud := audit.New(cfg.AuditType, cfg.AuditRemoteURL, nil)
+
+	userSvc := service.NewUserService(repo, checkinRepo, interRepo, cfg.UploadDir, cfg.PublicBaseURL)
 	user.NewHandler(userSvc).Register(authed)
 
-	checkinSvc := service.NewCheckinService(
-		checkinRepo, repo, rdb,
-		audit.New(cfg.AuditType, cfg.AuditRemoteURL, nil),
-	)
-	checkinH := checkin.NewHandler(checkinSvc)
+	checkinSvc := service.NewCheckinService(checkinRepo, repo, rdb, aud)
+	interSvc := service.NewInteractionService(checkinRepo, interRepo, rdb, aud)
+	checkinH := checkin.NewHandler(checkinSvc, interSvc)
 	checkinH.Register(authed)
 	// 某人的打卡列表（挂在 /users/:id 下）
 	authed.GET("/users/:id/checkins", checkinH.ListByUser)
 
+	interaction.NewHandler(interSvc).Register(authed)
+
 	feedSvc := service.NewFeedService(checkinRepo, rdb)
-	feed.NewHandler(feedSvc).Register(authed)
+	feed.NewHandler(feedSvc, interSvc).Register(authed)
 	service.StartDailyCron(ctx, feedSvc)
 
 	upload.NewHandler(cfg.UploadDir, cfg.PublicBaseURL).Register(authed)

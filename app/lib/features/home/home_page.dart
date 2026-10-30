@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/error/app_error.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/checkin.dart';
 import '../../shared/widgets/avatar.dart';
 import '../../shared/widgets/feed_card.dart';
+import '../../shared/widgets/toast.dart';
 import '../auth/auth_controller.dart';
 import '../checkin/checkin_controller.dart';
 import '../checkin/checkin_sheet.dart';
+import '../comment/comment_sheet.dart';
 
 /// 今日页（S4-03）：问候 + 今日卡 + 同品类横滑 + 今日微光 + 我的拾光。
 class HomePage extends StatefulWidget {
@@ -45,6 +48,40 @@ class _HomePageState extends State<HomePage> {
       Future.delayed(const Duration(milliseconds: 900), () {
         if (mounted) setState(() => _celebrating = false);
       });
+    }
+  }
+
+  /// 互动与留言入口（S5-04/S5-05）。
+  Future<void> _onAction(
+    String action, {
+    required int checkinId,
+    required int ownerId,
+  }) async {
+    final ctrl = context.read<CheckinController>();
+    if (action == 'comment') {
+      await CommentSheet.show(
+        context,
+        checkinId: checkinId,
+        checkinOwnerId: ownerId,
+      );
+      return;
+    }
+    final type = switch (action) {
+      'light' => 1,
+      'hug' => 2,
+      'companion' => 3,
+      _ => 0,
+    };
+    if (type == 0) return;
+    try {
+      await ctrl.toggleReaction(checkinId, type);
+      if (!mounted) return;
+      // 「同路」反馈（产品 4.5：建立同路人关系）
+      if (type == 3) Toast.show(context, '已加入同路，你们可以互相看见彼此的拾光');
+    } on AppError catch (e) {
+      if (mounted) Toast.show(context, e.message);
+    } catch (_) {
+      if (mounted) Toast.show(context, '操作失败，请稍后重试');
     }
   }
 
@@ -141,7 +178,11 @@ class _HomePageState extends State<HomePage> {
                       checkin: item.checkin,
                       nickname: item.user.nickname,
                       avatarUrl: item.user.avatarUrl,
-                      onAction: (_) {},
+                      onAction: (a) => _onAction(
+                        a,
+                        checkinId: item.checkin.id,
+                        ownerId: item.user.id,
+                      ),
                     ),
                   const SizedBox(height: 8),
                 ],
@@ -167,6 +208,11 @@ class _HomePageState extends State<HomePage> {
                       checkin: c,
                       nickname: nickname,
                       avatarUrl: auth.user?.avatarUrl,
+                      onAction: (a) => _onAction(
+                        a,
+                        checkinId: c.id,
+                        ownerId: c.userId,
+                      ),
                     ),
               ],
             ),

@@ -14,10 +14,13 @@ import (
 
 // Handler 打卡模块（S3）。
 type Handler struct {
-	svc *service.CheckinService
+	svc   *service.CheckinService
+	inter *service.InteractionService // 回填 my_reactions（S5）
 }
 
-func NewHandler(svc *service.CheckinService) *Handler { return &Handler{svc: svc} }
+func NewHandler(svc *service.CheckinService, inter *service.InteractionService) *Handler {
+	return &Handler{svc: svc, inter: inter}
+}
 
 func (h *Handler) Register(r *gin.RouterGroup) {
 	g := r.Group("/checkins")
@@ -39,9 +42,7 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 	httpx.OK(c, res)
-}
-
-// Detail GET /checkins/:id —— 打卡详情。
+} // Detail GET /checkins/:id —— 打卡详情。
 func (h *Handler) Detail(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || id <= 0 {
@@ -86,6 +87,7 @@ func (h *Handler) ListByUser(c *gin.Context) {
 		h.fail(c, err)
 		return
 	}
+	h.inter.FillMyReactions(c, viewer, items)
 	httpx.OK(c, gin.H{"items": items, "next_cursor": next})
 }
 

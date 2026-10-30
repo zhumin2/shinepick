@@ -221,4 +221,99 @@ class CheckinController extends ChangeNotifier {
 
   String _clientToken() =>
       'ct-${DateTime.now().microsecondsSinceEpoch}-${Random().nextInt(1 << 32)}';
+
+  // ---- S5-04 互动（乐观更新 + 失败回滚） ----
+
+  /// 切换互动：已选中则取消，未选中则添加。同路额外建立同路人关系。
+  Future<void> toggleReaction(int checkinId, int type) async {
+    final snapshot = _findCheckin(checkinId);
+    if (snapshot == null) return;
+    final active = snapshot.hasReaction(type);
+    // 乐观更新
+    _applyReaction(checkinId, type, add: !active);
+    notifyListeners();
+    try {
+      if (active) {
+        await auth.api.delete('/checkins/$checkinId/reactions?type=$type');
+      } else {
+        await auth.api.post(
+          '/checkins/$checkinId/reactions',
+          data: {'type': type},
+        );
+      }
+    } catch (_) {
+      // 回滚
+      _applyReaction(checkinId, type, add: active);
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Checkin? _findCheckin(int id) {
+    for (final c in _items) {
+      if (c.id == id) return c;
+    }
+    for (final f in _dailySelected) {
+      if (f.checkin.id == id) return f.checkin;
+    }
+    for (final f in _doing) {
+      if (f.checkin.id == id) return f.checkin;
+    }
+    return null;
+  }
+
+  void _applyReaction(int checkinId, int type, {required bool add}) {
+    List<int> next(Checkin c) {
+      final s = c.myReactions.toSet();
+      add ? s.add(type) : s.remove(type);
+      final l = s.toList()..sort();
+      return l;
+    }
+
+    _items = [
+      for (final c in _items)
+        c.id == checkinId ? c.copyWith(myReactions: next(c)) : c
+    ];
+    _dailySelected = [
+      for (final f in _dailySelected)
+        f.checkin.id == checkinId
+            ? f.copyWith(checkin: f.checkin.copyWith(myReactions: next(f.checkin)))
+            : f
+    ];
+    _doing = [
+      for (final f in _doing)
+        f.checkin.id == checkinId
+            ? f.copyWith(checkin: f.checkin.copyWith(myReactions: next(f.checkin)))
+            : f
+    ];
+  }
+
+  // ---- S5-05 留言 ----
+
+  /// 拉取某条打卡的留言（新→旧）。
+  Future<List<CommentVO>> loadComments(int checkinId, {int cursor = 0}) async {
+    final data = await auth.api.get<Map<String, dynamic>>(
+      '/checkins/$checkinId/comments${cursor > 0 ? '?cursor=$cursor' : ''}',
+      parser: (d) => Map<String, dynamic>.from(d as Map),
+    );
+    final raw = data['items'] as List<dynamic>? ?? const [];
+    return raw
+        .map((e) => CommentVO.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  /// 发留言（≤80 字；client_token 幂等）。
+  Future<CommentVO> addComment(int checkinId, String content) async {
+    final data = await auth.api.post<Map<String, dynamic>>(
+      '/checkins/$checkinId/comments',
+      data: {'content': content, 'client_token': _clientToken()},
+      parser: (d) => Map<String, dynamic>.from(d as Map),
+    );
+    return CommentVO.fromJson(data);
+  }
+
+  /// 删除留言（本人或打卡作者）。
+  Future<void> deleteComment(int commentId) async {
+    await auth.api.delete('/comments/$commentId');
+  }
 }

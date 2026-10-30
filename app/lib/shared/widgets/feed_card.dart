@@ -117,16 +117,19 @@ class FeedCard extends StatelessWidget {
                       ActBtn(
                         icon: Icons.light_mode_outlined,
                         label: '点亮',
+                        selected: c.hasReaction(1),
                         onTap: () => onAction?.call('light'),
                       ),
                       ActBtn(
                         icon: Icons.favorite_border,
                         label: '拥抱',
+                        selected: c.hasReaction(2),
                         onTap: () => onAction?.call('hug'),
                       ),
                       ActBtn(
                         icon: Icons.spa_outlined,
                         label: '同路',
+                        selected: c.hasReaction(3),
                         onTap: () => onAction?.call('companion'),
                       ),
                       ActBtn(

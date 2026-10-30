@@ -35,31 +35,37 @@ type UserStats struct {
 
 // ProfileVO 我的页资料视图。
 type ProfileVO struct {
-	ID          int64      `json:"id"`
-	Nickname    string     `json:"nickname"`
-	AvatarURL   string     `json:"avatar_url"`
-	Bio         string     `json:"bio"`
-	Gender      int8       `json:"gender"`
-	City        string     `json:"city"`
-	Birthday    *string    `json:"birthday,omitempty"` // YYYY-MM-DD
-	IsMinor     bool       `json:"is_minor"`
-	CreatedAt   time.Time  `json:"created_at"`
-	Stats       *UserStats `json:"stats,omitempty"`
+	ID        int64      `json:"id"`
+	Nickname  string     `json:"nickname"`
+	AvatarURL string     `json:"avatar_url"`
+	Bio       string     `json:"bio"`
+	Gender    int8       `json:"gender"`
+	City      string     `json:"city"`
+	Birthday  *string    `json:"birthday,omitempty"` // YYYY-MM-DD
+	IsMinor   bool       `json:"is_minor"`
+	CreatedAt time.Time  `json:"created_at"`
+	Stats     *UserStats `json:"stats,omitempty"`
 }
 
-// UserService 用户资料（S2-01/S2-02；S3 起统计含打卡数据）。
+// UserService 用户资料（S2-01/S2-02；S3 起统计含打卡数据，S5 起含同路人）。
 type UserService struct {
 	repo       *repository.UserRepo
 	checkins   *repository.CheckinRepo
+	inter      *repository.InteractionRepo
 	uploadDir  string // 头像存储根目录（dev 本地驱动）
 	publicBase string // 对外可访问的基础 URL（拼接头像链接）
 }
 
-func NewUserService(repo *repository.UserRepo, checkins *repository.CheckinRepo, uploadDir, publicBase string) *UserService {
-	return &UserService{repo: repo, checkins: checkins, uploadDir: uploadDir, publicBase: publicBase}
+func NewUserService(
+	repo *repository.UserRepo,
+	checkins *repository.CheckinRepo,
+	inter *repository.InteractionRepo,
+	uploadDir, publicBase string,
+) *UserService {
+	return &UserService{repo: repo, checkins: checkins, inter: inter, uploadDir: uploadDir, publicBase: publicBase}
 }
 
-// Profile 返回我的资料（含打卡统计）。
+// Profile 返回我的资料（含打卡与同路人统计）。
 func (s *UserService) Profile(ctx context.Context, uid int64) (*ProfileVO, error) {
 	u, err := s.repo.ByID(ctx, uid)
 	if err != nil {
@@ -72,6 +78,11 @@ func (s *UserService) Profile(ctx context.Context, uid int64) (*ProfileVO, error
 			checkinDays, streakDays := computeStreak(dates, time.Now().In(cstZone))
 			stats.CheckinDays = checkinDays
 			stats.StreakDays = streakDays
+		}
+	}
+	if s.inter != nil {
+		if n, err := s.inter.CompanionCount(ctx, uid); err == nil {
+			stats.Companions = int(n)
 		}
 	}
 	return toProfileVO(u, stats), nil
