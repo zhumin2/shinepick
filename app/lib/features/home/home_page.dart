@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/checkin.dart';
+import '../../shared/widgets/avatar.dart';
 import '../../shared/widgets/feed_card.dart';
 import '../auth/auth_controller.dart';
 import '../checkin/checkin_controller.dart';
@@ -139,6 +140,7 @@ class _HomePageState extends State<HomePage> {
                     FeedCard(
                       checkin: item.checkin,
                       nickname: item.user.nickname,
+                      avatarUrl: item.user.avatarUrl,
                       onAction: (_) {},
                     ),
                   const SizedBox(height: 8),
@@ -161,7 +163,11 @@ class _HomePageState extends State<HomePage> {
                   )
                 else
                   for (final c in checkin.items)
-                    FeedCard(checkin: c, nickname: nickname),
+                    FeedCard(
+                      checkin: c,
+                      nickname: nickname,
+                      avatarUrl: auth.user?.avatarUrl,
+                    ),
               ],
             ),
           ),
@@ -265,19 +271,7 @@ class _DoingCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 12,
-                backgroundColor: cat.color.withValues(alpha: 0.15),
-                child: Text(
-                  item.user.nickname.isEmpty
-                      ? '光'
-                      : item.user.nickname.characters.first,
-                  style: TextStyle(
-                      fontSize: 11,
-                      color: cat.color,
-                      fontWeight: FontWeight.w600),
-                ),
-              ),
+              Avatar(url: item.user.avatarUrl, nickname: item.user.nickname, size: 24),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(

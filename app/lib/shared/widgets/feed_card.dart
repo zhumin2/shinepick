@@ -10,6 +10,7 @@ import 'avatar.dart';
 class FeedCard extends StatelessWidget {
   final Checkin checkin;
   final String nickname;
+  final String? avatarUrl;
   final int streakDays;
   final void Function(String action)? onAction;
 
@@ -17,6 +18,7 @@ class FeedCard extends StatelessWidget {
     super.key,
     required this.checkin,
     this.nickname = '我',
+    this.avatarUrl,
     this.streakDays = 0,
     this.onAction,
   });
@@ -49,7 +51,7 @@ class FeedCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Avatar(nickname: nickname, size: 32),
+                      Avatar(url: avatarUrl, nickname: nickname, size: 32),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Column(
