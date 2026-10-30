@@ -87,30 +87,31 @@ class _CheckinSheetState extends State<CheckinSheet> {
     );
     if (files.isEmpty || !mounted) return;
     for (final f in files.take(remain)) {
-      final path = f.path;
-      if (path == null) continue;
-      setState(() => _uploading.add(path));
+      final name = f.name;
+      setState(() => _uploading.add(name));
       try {
-        final url = await _checkin.uploadImage(path);
+        // Web 上 file_picker 只给 bytes（无本地路径），统一按字节上传
+        final bytes = await f.readAsBytes();
+        final url = await _checkin.uploadImage(bytes, name);
         if (!mounted) return;
         setState(() {
-          _uploading.remove(path);
+          _uploading.remove(name);
           _imageUrls.add(url);
         });
       } on AppError catch (e) {
         if (!mounted) return;
         setState(() {
-          _uploading.remove(path);
-          _failed.add(path);
+          _uploading.remove(name);
+          _failed.add(name);
         });
         Toast.show(context, e.message);
-      } catch (_) {
+      } catch (e) {
         if (!mounted) return;
         setState(() {
-          _uploading.remove(path);
-          _failed.add(path);
+          _uploading.remove(name);
+          _failed.add(name);
         });
-        Toast.show(context, '图片上传失败，请重试');
+        Toast.show(context, '图片上传失败：$e');
       }
     }
   }

@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:math';
-
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -116,10 +115,12 @@ class CheckinController extends ChangeNotifier {
   }
 
   /// 上传单张配图，返回可访问 URL（POST /uploads/images）。
-  Future<String> uploadImage(String filePath) async {
-    final data = await auth.api.upload<Map<String, dynamic>>(
+  /// 传字节而非路径：Web 上 file_picker 只提供 bytes（没有本地路径）。
+  Future<String> uploadImage(Uint8List bytes, String filename) async {
+    final data = await auth.api.uploadBytes<Map<String, dynamic>>(
       '/uploads/images',
-      filePath,
+      bytes,
+      filename: filename,
       field: 'files',
       parser: (d) => Map<String, dynamic>.from(d as Map),
     );

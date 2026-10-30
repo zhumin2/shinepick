@@ -106,8 +106,13 @@ class AuthController extends ChangeNotifier {
   }
 
   /// 上传头像（POST /users/me/avatar），成功后拉取最新资料回显。
-  Future<void> uploadAvatar(String filePath) async {
-    await _api.upload<Map<String, dynamic>>( '/users/me/avatar', filePath);
+  /// 传字节而非路径：Web 上 file_picker 只提供 bytes。
+  Future<void> uploadAvatar(Uint8List bytes, String filename) async {
+    await _api.uploadBytes<Map<String, dynamic>>(
+      '/users/me/avatar',
+      bytes,
+      filename: filename,
+    );
     await refreshProfile();
   }
 

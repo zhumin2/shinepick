@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import '../../core/error/app_error.dart';
@@ -128,7 +130,7 @@ class ApiClient {
     return _unwrap<T>(resp, parser);
   }
 
-  /// multipart 文件上传（字段名默认 file）。
+  /// multipart 文件上传（原生存盘路径；Web 无本地路径，请用 [uploadBytes]）。
   Future<T> upload<T>(
     String path,
     String filePath, {
@@ -137,6 +139,21 @@ class ApiClient {
   }) async {
     final form = FormData.fromMap({
       field: await MultipartFile.fromFile(filePath),
+    });
+    final resp = await dio.post<Map<String, dynamic>>(path, data: form);
+    return _unwrap<T>(resp, parser);
+  }
+
+  /// multipart 字节上传（跨平台：Web 上 file_picker 只给 bytes，没有本地路径）。
+  Future<T> uploadBytes<T>(
+    String path,
+    Uint8List bytes, {
+    String filename = 'upload.jpg',
+    String field = 'file',
+    T Function(dynamic)? parser,
+  }) async {
+    final form = FormData.fromMap({
+      field: MultipartFile.fromBytes(bytes, filename: filename),
     });
     final resp = await dio.post<Map<String, dynamic>>(path, data: form);
     return _unwrap<T>(resp, parser);

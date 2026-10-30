@@ -43,16 +43,18 @@ class _ProfilePageState extends State<ProfilePage> {
     final files = await FilePickerPlatform.instance.pickFiles(
       type: FileType.image,
     );
-    final path = files.isNotEmpty ? files.first.path : null;
-    if (path == null) return;
+    if (files.isEmpty || !mounted) return;
+    final file = files.first;
     setState(() => _uploading = true);
     try {
-      await _auth.uploadAvatar(path);
+      // Web 上无本地路径，统一按字节上传
+      final bytes = await file.readAsBytes();
+      await _auth.uploadAvatar(bytes, file.name);
       if (mounted) Toast.show(context, '头像已更新');
     } on AppError catch (e) {
       if (mounted) Toast.show(context, e.message);
-    } catch (_) {
-      if (mounted) Toast.show(context, '上传失败，请重试');
+    } catch (e) {
+      if (mounted) Toast.show(context, '上传失败：$e');
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
