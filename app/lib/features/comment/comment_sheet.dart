@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -73,23 +75,27 @@ class _CommentSheetState extends State<CommentSheet> {
 
   Future<void> _load() async {
     try {
-      final list = await _ctrl.loadComments(widget.checkinId);
+      final list = await _ctrl.loadComments(widget.checkinId).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => throw TimeoutException('留言加载超时'),
+      );
       if (!mounted) return;
       setState(() {
         _comments = list;
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
-      Toast.show(context, '留言加载失败，请稍后重试');
+      debugPrint('[comment] load failed: $e');
+      Toast.show(context, '留言加载失败：$e');
     }
   }
 
   Future<void> _send() async {
     final text = _input.text.trim();
     if (text.isEmpty) {
-      Toast.show(context, '写一句想对 Ta 说的话吧');
+      Toast.show(context, '请先输入留言内容再发送');
       return;
     }
     if (text.characters.length > 80) {
@@ -98,23 +104,29 @@ class _CommentSheetState extends State<CommentSheet> {
     }
     if (_sending) return;
     setState(() => _sending = true);
+    // 加超时保护：网络挂起时不让「发送」按钮永久禁用
+    final api = _ctrl.addComment(widget.checkinId, text).timeout(
+      const Duration(seconds: 15),
+      onTimeout: () => throw TimeoutException('请求超时，请检查网络后重试'),
+    );
     try {
-      final c = await _ctrl.addComment(widget.checkinId, text);
+      final c = await api;
       if (!mounted) return;
       setState(() {
         _comments.insert(0, c); // 发送成功即置顶（产品 4.6）
         _input.clear();
-        _sending = false;
       });
       Toast.show(context, '已发送');
     } on AppError catch (e) {
-      if (!mounted) return;
-      setState(() => _sending = false);
-      Toast.show(context, e.message);
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _sending = false);
-      Toast.show(context, '发送失败，请重试');
+      if (mounted) Toast.show(context, e.message);
+    } on TimeoutException catch (e) {
+      if (mounted) Toast.show(context, e.message ?? '请求超时，请重试');
+    } catch (e, st) {
+      debugPrint('[comment] send failed: $e\n$st');
+      if (mounted) Toast.show(context, '发送失败：$e');
+    } finally {
+      // 任何路径都复位，避免按钮卡在禁用态
+      if (mounted) setState(() => _sending = false);
     }
   }
 

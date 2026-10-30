@@ -219,8 +219,10 @@ class CheckinController extends ChangeNotifier {
     } catch (_) {}
   }
 
+  /// client_token：时间戳 + 随机后缀，用于服务端幂等。
+  /// 注：使用 1<<31（而非 1<<32）避开 Web(dart2js) 的 32 位位移边界。
   String _clientToken() =>
-      'ct-${DateTime.now().microsecondsSinceEpoch}-${Random().nextInt(1 << 32)}';
+      'ct-${DateTime.now().microsecondsSinceEpoch}-${Random().nextInt(1 << 31)}';
 
   // ---- S5-04 互动（乐观更新 + 失败回滚） ----
 
