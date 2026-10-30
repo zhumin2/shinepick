@@ -88,6 +88,15 @@ func (r *CheckinRepo) TreeByUser(ctx context.Context, uid int64) (*model.TreePro
 	return &t, true, nil
 }
 
+// CountByUser 用户累计有效打卡次数（每次打卡计数，不去重日期）。
+func (r *CheckinRepo) CountByUser(ctx context.Context, uid int64) (int64, error) {
+	var n int64
+	err := r.db.WithContext(ctx).Model(&model.Checkin{}).
+		Where("user_id = ? AND status = 0", uid).
+		Count(&n).Error
+	return n, err
+}
+
 // DistinctDates 用户有打卡的日期（去重，新→旧），供资料页统计。
 func (r *CheckinRepo) DistinctDates(ctx context.Context, uid int64, limit int) ([]string, error) {
 	var dates []string

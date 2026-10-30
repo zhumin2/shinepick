@@ -15,6 +15,7 @@ class User {
   final bool isMinor;
 
   /// S3 打卡统计（/users/me 的 stats；登录接口无此数据）
+  final int checkinCount;
   final int checkinDays;
   final int streakDays;
   final int companions;
@@ -29,6 +30,7 @@ class User {
     this.city = '',
     this.birthday,
     this.isMinor = false,
+    this.checkinCount = 0,
     this.checkinDays = 0,
     this.streakDays = 0,
     this.companions = 0,
@@ -45,6 +47,7 @@ class User {
       city: json['city'] as String? ?? '',
       birthday: json['birthday'] as String?,
       isMinor: parseMinor(json['is_minor']),
+      checkinCount: (json['checkin_count'] as num?)?.toInt() ?? 0,
       checkinDays: (json['checkin_days'] as num?)?.toInt() ?? 0,
       streakDays: (json['streak_days'] as num?)?.toInt() ?? 0,
       companions: (json['companions'] as num?)?.toInt() ?? 0,
@@ -71,6 +74,8 @@ class User {
       city: json['city'] as String? ?? '',
       birthday: json['birthday'] as String?,
       isMinor: parseMinor(json['is_minor']),
+      checkinCount:
+          (stats?['checkin_count'] as num?)?.toInt() ?? checkinCount,
       checkinDays:
           (stats?['checkin_days'] as num?)?.toInt() ?? checkinDays,
       streakDays: (stats?['streak_days'] as num?)?.toInt() ?? streakDays,
@@ -88,6 +93,7 @@ class User {
         'city': city,
         'birthday': birthday,
         'is_minor': isMinor ? 1 : 0,
+        'checkin_count': checkinCount,
         'checkin_days': checkinDays,
         'streak_days': streakDays,
         'companions': companions,

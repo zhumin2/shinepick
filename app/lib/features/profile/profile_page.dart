@@ -168,6 +168,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   _StatItem(
+                      value: '${u?.checkinCount ?? 0}', label: '打卡次数'),
+                  const _VerticalDivider(),
+                  _StatItem(
                       value: '${u?.checkinDays ?? 0}', label: '打卡天数'),
                   const _VerticalDivider(),
                   _StatItem(

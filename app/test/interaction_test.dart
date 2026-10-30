@@ -181,4 +181,47 @@ void main() {
       expect(find.byIcon(Icons.push_pin_outlined), findsNothing);
     });
   });
+
+  group('Checkin 时间标签', () {
+    testWidgets('今天显示时刻，昨天带「昨天」，更早带日期', (tester) async {
+      final now = DateTime.now();
+      Future<void> pumpAt(DateTime t) async {
+        await tester.pumpWidget(MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: ListView(
+              children: [
+                FeedCard(
+                  checkin: Checkin(
+                    id: 1,
+                    userId: 2,
+                    category: 1,
+                    content: '内容',
+                    checkinDate: '2026-10-30',
+                    createdAt: t,
+                  ),
+                  nickname: 'pig',
+                ),
+              ],
+            ),
+          ),
+        ));
+      }
+
+      final today = DateTime(now.year, now.month, now.day);
+      await pumpAt(DateTime(today.year, today.month, today.day, 9, 5));
+      expect(find.textContaining('09:05'), findsOneWidget);
+      expect(find.textContaining('昨天'), findsNothing);
+
+      final y = today.subtract(const Duration(days: 1));
+      await pumpAt(DateTime(y.year, y.month, y.day, 21, 30));
+      expect(find.textContaining('昨天 21:30'), findsOneWidget);
+
+      final old = today.subtract(const Duration(days: 30));
+      await pumpAt(DateTime(old.year, old.month, old.day, 8, 0));
+      final mmdd =
+          '${old.month.toString().padLeft(2, '0')}-${old.day.toString().padLeft(2, '0')}';
+      expect(find.textContaining(mmdd), findsOneWidget);
+    });
+  });
 }

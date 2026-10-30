@@ -28,9 +28,10 @@ type ProfilePatch struct {
 
 // UserStats 我的页统计（companions 在 S5 同路人上线后填充）。
 type UserStats struct {
-	CheckinDays int `json:"checkin_days"`
-	StreakDays  int `json:"streak_days"`
-	Companions  int `json:"companions"`
+	CheckinCount int `json:"checkin_count"` // 累计打卡次数（每次 +1）
+	CheckinDays  int `json:"checkin_days"`  // 有打卡的天数（按日去重）
+	StreakDays   int `json:"streak_days"`   // 连续打卡天数
+	Companions   int `json:"companions"`    // 同路人数
 }
 
 // ProfileVO 我的页资料视图。
@@ -78,6 +79,9 @@ func (s *UserService) Profile(ctx context.Context, uid int64) (*ProfileVO, error
 			checkinDays, streakDays := computeStreak(dates, time.Now().In(cstZone))
 			stats.CheckinDays = checkinDays
 			stats.StreakDays = streakDays
+		}
+		if n, err := s.checkins.CountByUser(ctx, uid); err == nil {
+			stats.CheckinCount = int(n)
 		}
 	}
 	if s.inter != nil {

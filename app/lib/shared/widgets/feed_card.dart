@@ -169,12 +169,23 @@ class FeedCard extends StatelessWidget {
     );
   }
 
+  /// 时间标签：今天 HH:mm / 昨天 HH:mm / 更早 MM-DD HH:mm。
+  /// 缺日期会让跨天内容看起来像刚发的（用户反馈过），一律带日期语义。
   String _timeLabel() {
     final t = checkin.createdAt;
     if (t == null) return checkin.checkinDate;
-    final h = t.hour.toString().padLeft(2, '0');
-    final m = t.minute.toString().padLeft(2, '0');
-    return '$h:$m';
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(t.year, t.month, t.day);
+    final hm =
+        '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+    final diffDays = today.difference(day).inDays;
+    if (diffDays <= 0) return hm; // 今天
+    if (diffDays == 1) return '昨天 $hm';
+    final md =
+        '${t.month.toString().padLeft(2, '0')}-${t.day.toString().padLeft(2, '0')}';
+    if (t.year == now.year) return '$md $hm';
+    return '${t.year}-$md $hm';
   }
 }
 
