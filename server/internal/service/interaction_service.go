@@ -37,6 +37,7 @@ type InteractionService struct {
 	inter    *repository.InteractionRepo
 	rdb      *redis.Client
 	aud      audit.Auditor
+	social   *SocialService // S6：通知落表 + 拉黑静默拒绝
 }
 
 func NewInteractionService(
@@ -44,8 +45,9 @@ func NewInteractionService(
 	inter *repository.InteractionRepo,
 	rdb *redis.Client,
 	aud audit.Auditor,
+	social *SocialService,
 ) *InteractionService {
-	return &InteractionService{checkins: checkins, inter: inter, rdb: rdb, aud: aud}
+	return &InteractionService{checkins: checkins, inter: inter, rdb: rdb, aud: aud, social: social}
 }
 
 // React 点亮/拥抱/同路（幂等；同路额外建立同路人关系）。
@@ -60,6 +62,11 @@ func (s *InteractionService) React(ctx context.Context, uid, checkinID int64, ty
 	if c.Status != 0 || (c.UserID != uid && c.Visibility != 2) {
 		return gorm.ErrRecordNotFound
 	}
+	if s.social != nil {
+		if err := s.social.CanInteract(ctx, uid, c.UserID); err != nil {
+			return err // 双向拉黑：静默拒绝
+		}
+	}
 	if err := s.inter.AddReaction(ctx, checkinID, uid, typ); err != nil {
 		return err
 	}
@@ -68,6 +75,9 @@ func (s *InteractionService) React(ctx context.Context, uid, checkinID int64, ty
 		if err := s.inter.UpsertCompanion(ctx, c.UserID, uid, checkinID); err != nil {
 			return err
 		}
+	}
+	if s.social != nil {
+		s.social.notifyEvent(ctx, typ, c.UserID, uid, checkinID, 0)
 	}
 	return nil
 }
@@ -100,6 +110,11 @@ func (s *InteractionService) AddComment(ctx context.Context, uid, checkinID int6
 	}
 	if c.Status != 0 || (c.UserID != uid && c.Visibility != 2) {
 		return nil, gorm.ErrRecordNotFound
+	}
+	if s.social != nil {
+		if err := s.social.CanInteract(ctx, uid, c.UserID); err != nil {
+			return nil, err // 拉黑后无法留言（静默生效，产品 4.6）
+		}
 	}
 	content = trimSpace(content)
 	if n := utf8.RuneCountInString(content); n < 1 || n > commentMaxLen {
@@ -136,6 +151,9 @@ func (s *InteractionService) AddComment(ctx context.Context, uid, checkinID int6
 	}
 	if idemKey != "" {
 		s.rdb.Set(ctx, idemKey, cm.ID, commentIdemTTL)
+	}
+	if s.social != nil {
+		s.social.notifyEvent(ctx, 4, c.UserID, uid, checkinID, cm.ID)
 	}
 	return s.commentByID(ctx, cm.ID)
 }

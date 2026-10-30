@@ -15,7 +15,8 @@ import '../comment/comment_sheet.dart';
 
 /// 今日页（S4-03）：问候 + 今日卡 + 同品类横滑 + 今日微光 + 我的拾光。
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final bool embedded; // 嵌在底部导航壳里时隐藏部分 AppBar 动作
+  const HomePage({super.key, this.embedded = false});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -96,14 +97,9 @@ class _HomePageState extends State<HomePage> {
         title: const Text('拾光'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.person_outline, color: AppTheme.textSub),
-            tooltip: '我的',
-            onPressed: () => context.push('/profile'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: AppTheme.textSub),
-            tooltip: '退出登录',
-            onPressed: () => auth.logout(),
+            icon: const Icon(Icons.notifications_none, color: AppTheme.textSub),
+            tooltip: '通知',
+            onPressed: () => context.push('/notifications'),
           ),
         ],
       ),

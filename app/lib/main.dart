@@ -6,6 +6,7 @@ import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/checkin/checkin_controller.dart';
+import 'features/social/social_controller.dart';
 import 'shared/storage/token_store.dart';
 
 Future<void> main() async {
@@ -17,20 +18,24 @@ Future<void> main() async {
   final authController = AuthController(tokenStore);
   await authController.restore();
   final checkinController = CheckinController(authController);
+  final socialController = SocialController(authController);
 
   runApp(ShinePickApp(
     authController: authController,
     checkinController: checkinController,
+    socialController: socialController,
   ));
 }
 
 class ShinePickApp extends StatelessWidget {
   final AuthController authController;
   final CheckinController checkinController;
+  final SocialController socialController;
   const ShinePickApp({
     super.key,
     required this.authController,
     required this.checkinController,
+    required this.socialController,
   });
 
   @override
@@ -39,6 +44,7 @@ class ShinePickApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider.value(value: authController),
         ChangeNotifierProvider.value(value: checkinController),
+        ChangeNotifierProvider.value(value: socialController),
       ],
       child: MaterialApp.router(
         title: '拾光 ShinePick',

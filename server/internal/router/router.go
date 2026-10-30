@@ -13,6 +13,7 @@ import (
 	"shinepick/internal/module/checkin"
 	"shinepick/internal/module/feed"
 	"shinepick/internal/module/interaction"
+	"shinepick/internal/module/social"
 	"shinepick/internal/module/upload"
 	"shinepick/internal/module/user"
 	"shinepick/internal/pkg/audit"
@@ -41,16 +42,19 @@ func Register(ctx context.Context, e *gin.Engine, db *gorm.DB, rdb *redis.Client
 	user.NewHandler(userSvc).Register(authed)
 
 	checkinSvc := service.NewCheckinService(checkinRepo, repo, rdb, aud)
-	interSvc := service.NewInteractionService(checkinRepo, interRepo, rdb, aud)
-	checkinH := checkin.NewHandler(checkinSvc, interSvc)
+	socialSvc := service.NewSocialService(
+		repository.NewSocialRepo(db), interRepo, checkinRepo)
+	interSvc := service.NewInteractionService(checkinRepo, interRepo, rdb, aud, socialSvc)
+	checkinH := checkin.NewHandler(checkinSvc, interSvc, socialSvc)
 	checkinH.Register(authed)
 	// 某人的打卡列表（挂在 /users/:id 下）
 	authed.GET("/users/:id/checkins", checkinH.ListByUser)
 
 	interaction.NewHandler(interSvc).Register(authed)
+	social.NewHandler(socialSvc).Register(authed)
 
 	feedSvc := service.NewFeedService(checkinRepo, rdb)
-	feed.NewHandler(feedSvc, interSvc).Register(authed)
+	feed.NewHandler(feedSvc, interSvc, socialSvc).Register(authed)
 	service.StartDailyCron(ctx, feedSvc)
 
 	upload.NewHandler(cfg.UploadDir, cfg.PublicBaseURL).Register(authed)

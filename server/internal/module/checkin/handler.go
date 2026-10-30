@@ -14,12 +14,13 @@ import (
 
 // Handler 打卡模块（S3）。
 type Handler struct {
-	svc   *service.CheckinService
-	inter *service.InteractionService // 回填 my_reactions（S5）
+	svc    *service.CheckinService
+	inter  *service.InteractionService // 回填 my_reactions（S5）
+	social *service.SocialService      // 黑名单过滤（S6）
 }
 
-func NewHandler(svc *service.CheckinService, inter *service.InteractionService) *Handler {
-	return &Handler{svc: svc, inter: inter}
+func NewHandler(svc *service.CheckinService, inter *service.InteractionService, social *service.SocialService) *Handler {
+	return &Handler{svc: svc, inter: inter, social: social}
 }
 
 func (h *Handler) Register(r *gin.RouterGroup) {
@@ -56,9 +57,18 @@ func (h *Handler) Detail(c *gin.Context) {
 		h.fail(c, err)
 		return
 	}
+	viewer := c.GetInt64("uid")
+	if vo.UserID != viewer && h.social != nil {
+		// 黑名单双向不可见（静默 5001）
+		set, err := h.social.BlockedSet(c, viewer)
+		if err == nil && set[vo.UserID] {
+			httpx.Fail(c, code.ErrNotFound)
+			return
+		}
+	}
 	if h.inter != nil {
 		items := []*service.CheckinVO{vo}
-		h.inter.FillMyReactions(c, c.GetInt64("uid"), items)
+		h.inter.FillMyReactions(c, viewer, items)
 		h.inter.FillPreviewComments(c, items)
 	}
 	httpx.OK(c, vo)
@@ -96,6 +106,9 @@ func (h *Handler) ListByUser(c *gin.Context) {
 	}
 	h.inter.FillMyReactions(c, viewer, items)
 	h.inter.FillPreviewComments(c, items)
+	if !me && h.social != nil {
+		_ = h.social.FilterBlocked(c, viewer, items)
+	}
 	httpx.OK(c, gin.H{"items": items, "next_cursor": next})
 }
 

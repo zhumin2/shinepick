@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../../features/auth/auth_controller.dart';
 import '../../features/auth/login_page.dart';
-import '../../features/home/home_page.dart';
+import '../../features/settings/settings_page.dart';
+import '../../features/shell/shell_page.dart';
+import '../../features/social/notifications_page.dart';
 import '../../features/profile/profile_page.dart';
 
 /// 应用路由：未登录 → 登录页；已登录 → 首页。
@@ -32,11 +34,19 @@ class AppRouter {
         ),
         GoRoute(
           path: '/home',
-          builder: (context, state) => const HomePage(),
+          builder: (context, state) => const ShellPage(),
         ),
         GoRoute(
           path: '/profile',
           builder: (context, state) => const ProfilePage(),
+        ),
+        GoRoute(
+          path: '/notifications',
+          builder: (context, state) => const NotificationsPage(),
+        ),
+        GoRoute(
+          path: '/settings',
+          builder: (context, state) => const SettingsPage(),
         ),
       ],
     );

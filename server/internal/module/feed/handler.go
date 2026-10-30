@@ -12,12 +12,13 @@ import (
 
 // Handler Feed 与发现页（S4-01/S4-05）。
 type Handler struct {
-	svc   *service.FeedService
-	inter *service.InteractionService // 回填 my_reactions（S5）
+	svc    *service.FeedService
+	inter  *service.InteractionService // 回填 my_reactions（S5）
+	social *service.SocialService      // 黑名单过滤（S6）
 }
 
-func NewHandler(svc *service.FeedService, inter *service.InteractionService) *Handler {
-	return &Handler{svc: svc, inter: inter}
+func NewHandler(svc *service.FeedService, inter *service.InteractionService, social *service.SocialService) *Handler {
+	return &Handler{svc: svc, inter: inter, social: social}
 }
 
 func (h *Handler) Register(r *gin.RouterGroup) {
@@ -45,6 +46,10 @@ func (h *Handler) Today(c *gin.Context) {
 	h.inter.FillMyReactions(c, uid, doing)
 	h.inter.FillPreviewComments(c, daily)
 	h.inter.FillPreviewComments(c, doing)
+	if h.social != nil {
+		vo.DailySelected = h.social.FilterBlockedFeedItems(c, uid, vo.DailySelected)
+		vo.Doing = h.social.FilterBlockedFeedItems(c, uid, vo.Doing)
+	}
 	httpx.OK(c, vo)
 }
 
@@ -67,5 +72,8 @@ func (h *Handler) Explore(c *gin.Context) {
 	}
 	h.inter.FillMyReactions(c, c.GetInt64("uid"), vos)
 	h.inter.FillPreviewComments(c, vos)
+	if h.social != nil {
+		items = h.social.FilterBlockedFeedItems(c, c.GetInt64("uid"), items)
+	}
 	httpx.OK(c, gin.H{"items": items, "next_cursor": next})
 }

@@ -224,3 +224,57 @@ class CommentVO {
     return '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
   }
 }
+
+/// 应用内通知（对齐后端 NotificationVO）。
+class NotificationVO {
+  final int id;
+  final int type; // 1点亮 2拥抱 3同路 4留言 5系统
+  final int? actorId;
+  final String actorName;
+  final int? checkinId;
+  final int? commentId;
+  final int aggCount;
+  final String copy;
+  final bool isRead;
+  final DateTime? createdAt;
+
+  const NotificationVO({
+    required this.id,
+    required this.type,
+    required this.copy,
+    this.actorId,
+    this.actorName = '',
+    this.checkinId,
+    this.commentId,
+    this.aggCount = 1,
+    this.isRead = false,
+    this.createdAt,
+  });
+
+  factory NotificationVO.fromJson(Map<String, dynamic> json) =>
+      NotificationVO(
+        id: (json['id'] as num).toInt(),
+        type: (json['type'] as num?)?.toInt() ?? 5,
+        actorId: (json['actor_id'] as num?)?.toInt(),
+        actorName: json['actor_name'] as String? ?? '',
+        checkinId: (json['checkin_id'] as num?)?.toInt(),
+        commentId: (json['comment_id'] as num?)?.toInt(),
+        aggCount: (json['agg_count'] as num?)?.toInt() ?? 1,
+        copy: json['copy'] as String? ?? '',
+        isRead: json['is_read'] == true,
+        createdAt: json['created_at'] != null
+            ? DateTime.tryParse(json['created_at'] as String)
+            : null,
+      );
+
+  /// 相对时间。
+  String get timeLabel {
+    final t = createdAt;
+    if (t == null) return '';
+    final diff = DateTime.now().difference(t);
+    if (diff.inMinutes < 1) return '刚刚';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} 分钟前';
+    if (diff.inHours < 24) return '${diff.inHours} 小时前';
+    return '${t.month}-${t.day.toString().padLeft(2, '0')}';
+  }
+}

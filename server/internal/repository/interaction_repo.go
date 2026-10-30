@@ -159,3 +159,19 @@ func (r *InteractionRepo) CompanionCount(ctx context.Context, uid int64) (int64,
 		Count(&n).Error
 	return n, err
 }
+
+// MutualCompanion a 与 b 是否互为同路人（通知匿名化判断用，技术文档 6.3）。
+func (r *InteractionRepo) MutualCompanion(ctx context.Context, a, b int64) (bool, error) {
+	if a == b {
+		return false, nil
+	}
+	lo, hi := a, b
+	if lo > hi {
+		lo, hi = hi, lo
+	}
+	var n int64
+	err := r.db.WithContext(ctx).Model(&model.CompanionRelation{}).
+		Where("user_a = ? AND user_b = ? AND status = 0", lo, hi).
+		Count(&n).Error
+	return n > 0, err
+}

@@ -12,7 +12,8 @@ import '../auth/auth_controller.dart';
 
 /// 我的页（S2-03）：资料展示 + 编辑 + 头像上传；统计为骨架，S3 起填充。
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  final bool embedded; // 嵌在底部导航壳里时隐藏返回键
+  const ProfilePage({super.key, this.embedded = false});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -76,12 +77,15 @@ class _ProfilePageState extends State<ProfilePage> {
     final u = auth.user;
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-          tooltip: '返回',
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go('/home'),
-        ),
+        automaticallyImplyLeading: !widget.embedded,
+        leading: widget.embedded
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+                tooltip: '返回',
+                onPressed: () =>
+                    context.canPop() ? context.pop() : context.go('/home'),
+              ),
         title: const Text('我的'),
         actions: [
           IconButton(
@@ -196,6 +200,41 @@ class _ProfilePageState extends State<ProfilePage> {
                   _InfoRow(label: '生日', value: u?.birthday ?? '未填写'),
                   const _Divider(),
                   _InfoRow(label: '性别', value: _genderLabel(u?.gender ?? 0)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            // 通知 / 设置入口（S6-04/06）
+            Material(
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: AppTheme.divider),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.notifications_none,
+                        size: 20, color: AppTheme.textSub),
+                    title: const Text('通知',
+                        style: TextStyle(
+                            fontSize: 15, color: AppTheme.textMain)),
+                    trailing: const Icon(Icons.chevron_right,
+                        size: 18, color: AppTheme.textSub),
+                    onTap: () => context.go('/notifications'),
+                  ),
+                  const Divider(height: 1, indent: 16, color: AppTheme.divider),
+                  ListTile(
+                    leading: const Icon(Icons.settings_outlined,
+                        size: 20, color: AppTheme.textSub),
+                    title: const Text('设置',
+                        style: TextStyle(
+                            fontSize: 15, color: AppTheme.textMain)),
+                    trailing: const Icon(Icons.chevron_right,
+                        size: 18, color: AppTheme.textSub),
+                    onTap: () => context.go('/settings'),
+                  ),
                 ],
               ),
             ),
