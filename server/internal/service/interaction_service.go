@@ -82,13 +82,14 @@ func (s *InteractionService) Unreact(ctx context.Context, uid, checkinID int64, 
 
 // CommentVO 留言视图。
 type CommentVO struct {
-	ID        int64     `json:"id"`
-	CheckinID int64     `json:"checkin_id"`
-	UserID    int64     `json:"user_id"`
-	Nickname  string    `json:"nickname"`
-	AvatarURL string    `json:"avatar_url"`
-	Content   string    `json:"content"`
-	CreatedAt time.Time `json:"created_at"`
+	ID         int64     `json:"id"`
+	CheckinID  int64     `json:"checkin_id"`
+	UserID     int64     `json:"user_id"`
+	Nickname   string    `json:"nickname"`
+	AvatarURL  string    `json:"avatar_url"`
+	Content    string    `json:"content"`
+	IsFeatured bool      `json:"is_featured"` // 作者指定在卡片展示
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 // AddComment 发留言：可见性 → 80 字 → 审核 → 频控 → 幂等 → 落库。
@@ -201,13 +202,14 @@ func (s *InteractionService) commentByID(ctx context.Context, id int64) (*Commen
 
 func toCommentVO(c *repository.CommentWithUser) *CommentVO {
 	return &CommentVO{
-		ID:        c.ID,
-		CheckinID: c.CheckinID,
-		UserID:    c.UserID,
-		Nickname:  c.Nickname,
-		AvatarURL: c.AvatarURL,
-		Content:   c.Content,
-		CreatedAt: c.CreatedAt,
+		ID:         c.ID,
+		CheckinID:  c.CheckinID,
+		UserID:     c.UserID,
+		Nickname:   c.Nickname,
+		AvatarURL:  c.AvatarURL,
+		Content:    c.Content,
+		IsFeatured: c.IsFeatured == 1,
+		CreatedAt:  c.CreatedAt,
 	}
 }
 
@@ -229,6 +231,53 @@ func (s *InteractionService) FillMyReactions(ctx context.Context, viewer int64, 
 			it.MyReactions = t
 		}
 	}
+}
+
+// previewPerCheckin 卡片上每条打卡展示的留言条数上限（产品原则：只给温度，不给数量）。
+const previewPerCheckin = 2
+
+// FillPreviewComments 给一批 CheckinVO 回填卡片展示留言（作者指定优先，其次最新）。
+func (s *InteractionService) FillPreviewComments(ctx context.Context, items []*CheckinVO) {
+	if len(items) == 0 {
+		return
+	}
+	ids := make([]int64, 0, len(items))
+	for _, it := range items {
+		ids = append(ids, it.ID)
+	}
+	m, err := s.inter.PreviewComments(ctx, ids, previewPerCheckin)
+	if err != nil {
+		return // 回填失败不阻塞内容返回
+	}
+	for _, it := range items {
+		if list, ok := m[it.ID]; ok && len(list) > 0 {
+			vos := make([]*CommentVO, 0, len(list))
+			for _, c := range list {
+				vos = append(vos, toCommentVO(c))
+			}
+			it.PreviewComments = vos
+		}
+	}
+}
+
+// SetFeatured 作者指定某条留言在卡片上展示（或取消）。
+// 仅打卡作者可操作（产品 4.6：打卡作者可管理自己内容下的留言）。
+func (s *InteractionService) SetFeatured(ctx context.Context, viewer, commentID int64, featured bool) error {
+	cm, err := s.inter.CommentByID(ctx, commentID)
+	if err != nil {
+		return err
+	}
+	if cm.Status != 0 {
+		return gorm.ErrRecordNotFound
+	}
+	owner, err := s.checkins.ByID(ctx, cm.CheckinID)
+	if err != nil {
+		return err
+	}
+	if owner.UserID != viewer {
+		return ErrForbidden
+	}
+	return s.inter.SetFeatured(ctx, commentID, featured)
 }
 
 // trimSpace 去除首尾空白（含全角空格等 Unicode 空白）。

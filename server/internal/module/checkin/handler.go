@@ -42,7 +42,9 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 	httpx.OK(c, res)
-} // Detail GET /checkins/:id —— 打卡详情。
+}
+
+// Detail GET /checkins/:id —— 打卡详情。
 func (h *Handler) Detail(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || id <= 0 {
@@ -53,6 +55,11 @@ func (h *Handler) Detail(c *gin.Context) {
 	if err != nil {
 		h.fail(c, err)
 		return
+	}
+	if h.inter != nil {
+		items := []*service.CheckinVO{vo}
+		h.inter.FillMyReactions(c, c.GetInt64("uid"), items)
+		h.inter.FillPreviewComments(c, items)
 	}
 	httpx.OK(c, vo)
 }
@@ -88,6 +95,7 @@ func (h *Handler) ListByUser(c *gin.Context) {
 		return
 	}
 	h.inter.FillMyReactions(c, viewer, items)
+	h.inter.FillPreviewComments(c, items)
 	httpx.OK(c, gin.H{"items": items, "next_cursor": next})
 }
 

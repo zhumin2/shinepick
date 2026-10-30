@@ -318,4 +318,15 @@ class CheckinController extends ChangeNotifier {
   Future<void> deleteComment(int commentId) async {
     await auth.api.delete('/comments/$commentId');
   }
+
+  /// 作者指定/取消某条留言在卡片上展示（S5 增强）。
+  Future<void> setCommentFeatured(int commentId, bool featured) async {
+    await auth.api.patch(
+      '/comments/$commentId/feature',
+      data: {'featured': featured},
+    );
+    // 让卡片预览立即反映（下次刷新服务端也会返回正确排序）
+    await load();
+    await loadFeed();
+  }
 }

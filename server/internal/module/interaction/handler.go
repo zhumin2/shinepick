@@ -26,6 +26,7 @@ func (h *Handler) Register(r *gin.RouterGroup) {
 	g.GET("/:id/comments", h.ListComments)
 	g.POST("/:id/comments", h.AddComment)
 	r.DELETE("/comments/:id", h.DeleteComment)
+	r.PATCH("/comments/:id/feature", h.SetFeatured)
 }
 
 type reactReq struct {
@@ -87,8 +88,8 @@ func (h *Handler) ListComments(c *gin.Context) {
 }
 
 type commentReq struct {
-	Content      string `json:"content"`
-	ClientToken  string `json:"client_token"`
+	Content     string `json:"content"`
+	ClientToken string `json:"client_token"`
 }
 
 // AddComment POST /checkins/:id/comments（≤80 字）。
@@ -123,6 +124,27 @@ func (h *Handler) DeleteComment(c *gin.Context) {
 		return
 	}
 	httpx.OK(c, gin.H{"deleted": true})
+}
+
+// SetFeatured PATCH /comments/:id/feature {featured:true|false} —— 仅打卡作者。
+func (h *Handler) SetFeatured(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		httpx.FailMsg(c, code.ErrBadRequest, "留言 id 不合法")
+		return
+	}
+	var req struct {
+		Featured *bool `json:"featured"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || req.Featured == nil {
+		httpx.FailMsg(c, code.ErrBadRequest, "缺少 featured 参数")
+		return
+	}
+	if err := h.svc.SetFeatured(c, c.GetInt64("uid"), id, *req.Featured); err != nil {
+		h.fail(c, err)
+		return
+	}
+	httpx.OK(c, gin.H{"featured": *req.Featured})
 }
 
 func (h *Handler) fail(c *gin.Context, err error) {

@@ -43,6 +43,8 @@ func (h *Handler) Today(c *gin.Context) {
 	}
 	h.inter.FillMyReactions(c, uid, daily)
 	h.inter.FillMyReactions(c, uid, doing)
+	h.inter.FillPreviewComments(c, daily)
+	h.inter.FillPreviewComments(c, doing)
 	httpx.OK(c, vo)
 }
 
@@ -64,5 +66,6 @@ func (h *Handler) Explore(c *gin.Context) {
 		vos = append(vos, &it.CheckinVO)
 	}
 	h.inter.FillMyReactions(c, c.GetInt64("uid"), vos)
+	h.inter.FillPreviewComments(c, vos)
 	httpx.OK(c, gin.H{"items": items, "next_cursor": next})
 }

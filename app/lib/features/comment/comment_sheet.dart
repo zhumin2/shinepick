@@ -60,6 +60,29 @@ class _CommentSheetState extends State<CommentSheet> {
     return me == c.userId || me == widget.checkinOwnerId;
   }
 
+  /// 能否设置「卡片展示」：仅打卡作者。
+  bool _canFeature() {
+    final me = context.read<AuthController>().user?.id;
+    return me == widget.checkinOwnerId;
+  }
+
+  Future<void> _toggleFeatured(CommentVO c) async {
+    final next = !c.isFeatured;
+    try {
+      await _ctrl.setCommentFeatured(c.id, next);
+      if (!mounted) return;
+      setState(() {
+        final i = _comments.indexWhere((e) => e.id == c.id);
+        if (i >= 0) _comments[i] = _comments[i].copyWith(isFeatured: next);
+      });
+      Toast.show(context, next ? '已设为卡片展示' : '已取消卡片展示');
+    } on AppError catch (e) {
+      if (mounted) Toast.show(context, e.message);
+    } catch (_) {
+      if (mounted) Toast.show(context, '设置失败，请重试');
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -187,6 +210,12 @@ class _CommentSheetState extends State<CommentSheet> {
             const SizedBox(height: 4),
             const Text('一句温暖的话，不用等回复',
                 style: TextStyle(fontSize: 12, color: AppTheme.textSub)),
+            if (_canFeature())
+              const Padding(
+                padding: EdgeInsets.only(top: 4),
+                child: Text('点图钉可把留言展示在打卡卡片上',
+                    style: TextStyle(fontSize: 11, color: AppTheme.textSub)),
+              ),
             const SizedBox(height: 10),
             const Divider(height: 1, color: AppTheme.divider),
             Expanded(child: _buildList()),
@@ -248,6 +277,22 @@ class _CommentSheetState extends State<CommentSheet> {
                       Text(c.timeLabel,
                           style: const TextStyle(
                               fontSize: 11, color: AppTheme.textSub)),
+                      if (_canFeature())
+                        GestureDetector(
+                          onTap: () => _toggleFeatured(c),
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 6),
+                            child: Icon(
+                              c.isFeatured
+                                  ? Icons.push_pin
+                                  : Icons.push_pin_outlined,
+                              size: 15,
+                              color: c.isFeatured
+                                  ? AppTheme.primary
+                                  : AppTheme.textSub,
+                            ),
+                          ),
+                        ),
                       if (_canDelete(c))
                         GestureDetector(
                           onTap: () => _delete(c),

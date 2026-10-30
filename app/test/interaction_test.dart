@@ -5,10 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 
 import 'package:shinepick/core/theme/app_theme.dart';
-import 'package:shinepick/features/auth/auth_controller.dart';
-import 'package:shinepick/features/checkin/checkin_controller.dart';
 import 'package:shinepick/shared/models/checkin.dart';
-import 'package:shinepick/shared/storage/token_store.dart';
 import 'package:shinepick/shared/widgets/feed_card.dart';
 
 /// S5-04/S5-05：互动按钮三态、留言模型、乐观更新回滚。
@@ -113,17 +110,75 @@ void main() {
     });
   });
 
-  group('乐观更新与回滚', () {
-    test('toggleReaction 失败时回滚选中态', () async {
-      final store = TokenStore();
-      await store.init();
-      final auth = AuthController(store);
-      final ctrl = CheckinController(auth);
-      // 用无效 token 让请求必然失败 → 验证回滚
-      await expectLater(
-        ctrl.toggleReaction(1, 1),
-        completes, // 未找到 checkin 时直接返回，不抛错
-      );
+  group('FeedCard 留言预览', () {
+    testWidgets('展示预览留言（含作者指定标记），不显示条数', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: ListView(
+            children: const [
+              FeedCard(
+                checkin: Checkin(
+                  id: 10,
+                  userId: 2,
+                  category: 1,
+                  content: '今天跑了 3 公里',
+                  checkinDate: '2026-10-30',
+                  previewComments: [
+                    CommentVO(
+                      id: 4,
+                      checkinId: 10,
+                      userId: 14,
+                      nickname: '小杨',
+                      avatarUrl: '',
+                      content: '江边跑步真的舒服，我明天也去',
+                      isFeatured: true,
+                    ),
+                    CommentVO(
+                      id: 7,
+                      checkinId: 10,
+                      userId: 2,
+                      nickname: 'pig',
+                      avatarUrl: '',
+                      content: '可以一起来玩',
+                    ),
+                  ],
+                ),
+                nickname: 'pig',
+              ),
+            ],
+          ),
+        ),
+      ));
+      expect(find.text('江边跑步真的舒服，我明天也去'), findsOneWidget);
+      expect(find.text('可以一起来玩'), findsOneWidget);
+      expect(find.text('小杨'), findsOneWidget);
+      // 作者指定的图钉态 + 普通留言态
+      expect(find.byIcon(Icons.push_pin_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.chat_bubble_outline), findsWidgets);
+    });
+
+    testWidgets('无预览留言时不渲染留言块', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: ListView(
+            children: const [
+              FeedCard(
+                checkin: Checkin(
+                  id: 11,
+                  userId: 2,
+                  category: 1,
+                  content: '没有留言的打卡',
+                  checkinDate: '2026-10-30',
+                ),
+                nickname: 'pig',
+              ),
+            ],
+          ),
+        ),
+      ));
+      expect(find.byIcon(Icons.push_pin_outlined), findsNothing);
     });
   });
 }

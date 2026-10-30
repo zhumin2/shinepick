@@ -30,8 +30,8 @@ func (h *Handler) Register(r *gin.RouterGroup) {
 }
 
 const (
-	imageMaxSize   = 5 << 20 // 单张 5MB
-	imageMaxCount  = 9       // 单次最多 9 张
+	imageMaxSize  = 5 << 20 // 单张 5MB
+	imageMaxCount = 9       // 单次最多 9 张
 )
 
 var imageExts = map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".webp": true, ".gif": true}

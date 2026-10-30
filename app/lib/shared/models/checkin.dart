@@ -47,6 +47,9 @@ class Checkin {
   /// 当前观众已点的互动类型（S5：1点亮 2拥抱 3同路）
   final List<int> myReactions;
 
+  /// 卡片展示的留言（最多 2 条；作者指定优先，不暴露总数）
+  final List<CommentVO> previewComments;
+
   const Checkin({
     required this.id,
     required this.userId,
@@ -57,6 +60,7 @@ class Checkin {
     required this.checkinDate,
     this.createdAt,
     this.myReactions = const [],
+    this.previewComments = const [],
   });
 
   factory Checkin.fromJson(Map<String, dynamic> json) {
@@ -78,11 +82,17 @@ class Checkin {
               ?.map((e) => (e as num).toInt())
               .toList() ??
           const [],
+      previewComments: (json['preview_comments'] as List<dynamic>?)
+              ?.map((e) =>
+                  CommentVO.fromJson(Map<String, dynamic>.from(e as Map)))
+              .toList() ??
+          const [],
     );
   }
 
-  /// 带互动态的新副本（乐观更新用）。
-  Checkin copyWith({List<int>? myReactions}) => Checkin(
+  /// 带互动态/预览留言的新副本（乐观更新用）。
+  Checkin copyWith({List<int>? myReactions, List<CommentVO>? previewComments}) =>
+      Checkin(
         id: id,
         userId: userId,
         category: category,
@@ -92,6 +102,7 @@ class Checkin {
         checkinDate: checkinDate,
         createdAt: createdAt,
         myReactions: myReactions ?? this.myReactions,
+        previewComments: previewComments ?? this.previewComments,
       );
 
   bool hasReaction(int type) => myReactions.contains(type);
@@ -163,6 +174,9 @@ class CommentVO {
   final String nickname;
   final String avatarUrl;
   final String content;
+
+  /// 作者指定在卡片上展示
+  final bool isFeatured;
   final DateTime? createdAt;
 
   const CommentVO({
@@ -172,6 +186,7 @@ class CommentVO {
     required this.nickname,
     required this.avatarUrl,
     required this.content,
+    this.isFeatured = false,
     this.createdAt,
   });
 
@@ -182,9 +197,21 @@ class CommentVO {
         nickname: json['nickname'] as String? ?? '',
         avatarUrl: json['avatar_url'] as String? ?? '',
         content: json['content'] as String? ?? '',
+        isFeatured: json['is_featured'] == true,
         createdAt: json['created_at'] != null
             ? DateTime.tryParse(json['created_at'] as String)
             : null,
+      );
+
+  CommentVO copyWith({bool? isFeatured}) => CommentVO(
+        id: id,
+        checkinId: checkinId,
+        userId: userId,
+        nickname: nickname,
+        avatarUrl: avatarUrl,
+        content: content,
+        isFeatured: isFeatured ?? this.isFeatured,
+        createdAt: createdAt,
       );
 
   /// 相对时间：刚刚 / N 分钟前 / HH:mm。

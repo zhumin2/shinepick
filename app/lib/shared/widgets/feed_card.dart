@@ -110,6 +110,27 @@ class FeedCard extends StatelessWidget {
                         ),
                       ),
                   ],
+                  // 留言预览（最多 2 条，作者指定优先；不显示总数——产品 4.6）
+                  if (c.previewComments.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.bg,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppTheme.divider),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          for (var i = 0; i < c.previewComments.length; i++) ...[
+                            if (i > 0) const SizedBox(height: 6),
+                            _PreviewLine(comment: c.previewComments[i]),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -167,6 +188,44 @@ extension on Checkin {
       default:
         return '同路人';
     }
+  }
+}
+
+/// 单条留言预览：小便签的视觉（作者指定的带小星标）。
+class _PreviewLine extends StatelessWidget {
+  final CommentVO comment;
+  const _PreviewLine({required this.comment});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          comment.isFeatured ? Icons.push_pin_outlined : Icons.chat_bubble_outline,
+          size: 12,
+          color: comment.isFeatured
+              ? AppTheme.primary
+              : AppTheme.textSub.withValues(alpha: 0.7),
+        ),
+        const SizedBox(width: 6),
+        Text(comment.nickname,
+            style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textSub)),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            comment.content,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+                fontSize: 12, height: 1.4, color: AppTheme.textMain),
+          ),
+        ),
+      ],
+    );
   }
 }
 

@@ -35,8 +35,8 @@ const (
 
 // 哨兵错误：handler 用 errors.Is 判断业务分支。
 var (
-	ErrFrequent   = errors.New("frequent")
-	ErrSmsInvalid = errors.New("sms_invalid")
+	ErrFrequent     = errors.New("frequent")
+	ErrSmsInvalid   = errors.New("sms_invalid")
 	ErrUnauthorized = errors.New("unauthorized")
 )
 
@@ -167,10 +167,10 @@ func (s *AuthService) failAttempt(ctx context.Context, key string) error {
 // ---------------- VO / 工具 ----------------
 
 type LoginResult struct {
-	AccessToken  string      `json:"access_token"`
-	RefreshToken string      `json:"refresh_token"`
-	ExpiresIn    int         `json:"expires_in"`
-	User         *UserVO     `json:"user,omitempty"`
+	AccessToken  string  `json:"access_token"`
+	RefreshToken string  `json:"refresh_token"`
+	ExpiresIn    int     `json:"expires_in"`
+	User         *UserVO `json:"user,omitempty"`
 }
 
 type UserVO struct {

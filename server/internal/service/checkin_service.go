@@ -58,17 +58,18 @@ type CreateCheckinReq struct {
 
 // CheckinVO 打卡视图（列表/详情/发布共用）。
 type CheckinVO struct {
-	ID          int64           `json:"id"`
-	UserID      int64           `json:"user_id"`
-	Category    int8            `json:"category"`
-	Content     string          `json:"content"`
-	ImageURLs   []string        `json:"image_urls"`
-	VideoURL    string          `json:"video_url,omitempty"`
-	Visibility  int8            `json:"visibility"`
-	Extra       json.RawMessage `json:"extra,omitempty"`
-	CheckinDate string          `json:"checkin_date"`
-	CreatedAt   time.Time       `json:"created_at"`
-	MyReactions []int8          `json:"my_reactions,omitempty"` // 当前观众已点的互动类型（S5 按钮态）
+	ID              int64           `json:"id"`
+	UserID          int64           `json:"user_id"`
+	Category        int8            `json:"category"`
+	Content         string          `json:"content"`
+	ImageURLs       []string        `json:"image_urls"`
+	VideoURL        string          `json:"video_url,omitempty"`
+	Visibility      int8            `json:"visibility"`
+	Extra           json.RawMessage `json:"extra,omitempty"`
+	CheckinDate     string          `json:"checkin_date"`
+	CreatedAt       time.Time       `json:"created_at"`
+	MyReactions     []int8          `json:"my_reactions,omitempty"`     // 当前观众已点的互动类型（S5 按钮态）
+	PreviewComments []*CommentVO    `json:"preview_comments,omitempty"` // 卡片展示的留言（最多 2 条，不暴露总数）
 }
 
 // PublishResult 发布结果（含树联动数据）。

@@ -12,11 +12,11 @@ import (
 
 // Feed 缓存键与 TTL（技术文档 8.2）。
 const (
-	feedSelectedKey  = "feed:selected"     // 每日精选 List
-	feedDoingKeyFmt  = "feed:doing:%d:%s"  // feed:doing:{uid}:{date}（按人按日）
-	feedCacheTTL     = 60 * time.Second
-	dailySelectedN   = 5                    // 今日微光条数
-	doingN           = 5                    // 同品类横滑条数
+	feedSelectedKey = "feed:selected"    // 每日精选 List
+	feedDoingKeyFmt = "feed:doing:%d:%s" // feed:doing:{uid}:{date}（按人按日）
+	feedCacheTTL    = 60 * time.Second
+	dailySelectedN  = 5 // 今日微光条数
+	doingN          = 5 // 同品类横滑条数
 )
 
 // FeedUser Feed 条目的作者信息。

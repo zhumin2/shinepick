@@ -57,6 +57,46 @@ type CommentWithUser struct {
 	AvatarURL string `json:"avatar_url"`
 }
 
+// PreviewComments 批量取一批打卡的卡片展示留言（每条最多 per 条）。
+// 排序：作者指定(is_featured) 优先，其次最新；按打卡分组后截断。
+// 一次查询避免列表页 N+1。
+func (r *InteractionRepo) PreviewComments(ctx context.Context, checkinIDs []int64, per int) (map[int64][]*CommentWithUser, error) {
+	out := map[int64][]*CommentWithUser{}
+	if len(checkinIDs) == 0 || per <= 0 {
+		return out, nil
+	}
+	var list []*CommentWithUser
+	err := r.db.WithContext(ctx).Model(&model.Comment{}).
+		Select("`comments`.*, `users`.`nickname` AS `nickname`, `users`.`avatar_url` AS `avatar_url`").
+		Joins("JOIN `users` ON `users`.`id` = `comments`.`user_id`").
+		Where("comments.checkin_id IN ? AND comments.status = 0", checkinIDs).
+		Order("comments.is_featured DESC, comments.id DESC").
+		Limit(len(checkinIDs) * per * 4). // 上限保护：每条打卡最多留 4 倍余量
+		Find(&list).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, c := range list {
+		group := out[c.CheckinID]
+		if len(group) >= per {
+			continue
+		}
+		out[c.CheckinID] = append(group, c)
+	}
+	return out, nil
+}
+
+// SetFeatured 设置/取消卡片的留言展示（仅打卡作者可调用，权限在 service 校验）。
+func (r *InteractionRepo) SetFeatured(ctx context.Context, commentID int64, featured bool) error {
+	v := int8(0)
+	if featured {
+		v = 1
+	}
+	return r.db.WithContext(ctx).Model(&model.Comment{}).
+		Where("id = ? AND status = 0", commentID).
+		Update("is_featured", v).Error
+}
+
 // AddComment 写入留言。
 func (r *InteractionRepo) AddComment(ctx context.Context, c *model.Comment) error {
 	return r.db.WithContext(ctx).Create(c).Error
