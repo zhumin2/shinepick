@@ -14,6 +14,7 @@ import (
 	"shinepick/internal/module/feed"
 	"shinepick/internal/module/interaction"
 	"shinepick/internal/module/social"
+	"shinepick/internal/module/tree"
 	"shinepick/internal/module/upload"
 	"shinepick/internal/module/user"
 	"shinepick/internal/pkg/audit"
@@ -42,8 +43,13 @@ func Register(ctx context.Context, e *gin.Engine, db *gorm.DB, rdb *redis.Client
 	user.NewHandler(userSvc).Register(authed)
 
 	checkinSvc := service.NewCheckinService(checkinRepo, repo, rdb, aud)
-	socialSvc := service.NewSocialService(
-		repository.NewSocialRepo(db), interRepo, checkinRepo)
+	socialRepo := repository.NewSocialRepo(db)
+	socialSvc := service.NewSocialService(socialRepo, interRepo, checkinRepo)
+	badgeRepo := repository.NewBadgeRepo(db)
+	treeSvc := service.NewTreeService(checkinRepo, badgeRepo, db, socialSvc)
+	checkinSvc.SetOnPublished(func(ctx context.Context, uid, checkinID int64) {
+		_, _ = treeSvc.EvaluateBadges(ctx, uid, &checkinID) // S7：发布后评估徽章
+	})
 	interSvc := service.NewInteractionService(checkinRepo, interRepo, rdb, aud, socialSvc)
 	checkinH := checkin.NewHandler(checkinSvc, interSvc, socialSvc)
 	checkinH.Register(authed)
@@ -52,6 +58,7 @@ func Register(ctx context.Context, e *gin.Engine, db *gorm.DB, rdb *redis.Client
 
 	interaction.NewHandler(interSvc).Register(authed)
 	social.NewHandler(socialSvc).Register(authed)
+	tree.NewHandler(treeSvc).Register(authed)
 
 	feedSvc := service.NewFeedService(checkinRepo, rdb)
 	feed.NewHandler(feedSvc, interSvc, socialSvc).Register(authed)

@@ -278,3 +278,87 @@ class NotificationVO {
     return '${t.month}-${t.day.toString().padLeft(2, '0')}';
   }
 }
+
+/// 拾光树状态（对齐后端 TreeVO）。
+class TreeVO {
+  final int level;
+  final int points;
+  final int season; // 1春 2夏 3秋 4冬
+  final int yearCount;
+  final int yearTarget;
+  final int streakDays;
+  final int total;
+  final List<LightPoint> lightPoints;
+
+  const TreeVO({
+    required this.level,
+    required this.points,
+    required this.season,
+    required this.yearCount,
+    required this.yearTarget,
+    required this.streakDays,
+    required this.total,
+    required this.lightPoints,
+  });
+
+  factory TreeVO.fromJson(Map<String, dynamic> json) {
+    return TreeVO(
+      level: (json['level'] as num?)?.toInt() ?? 1,
+      points: (json['points'] as num?)?.toInt() ?? 0,
+      season: (json['season'] as num?)?.toInt() ?? 1,
+      yearCount: (json['year_count'] as num?)?.toInt() ?? 0,
+      yearTarget: (json['year_target'] as num?)?.toInt() ?? 300,
+      streakDays: (json['streak_days'] as num?)?.toInt() ?? 0,
+      total: (json['total'] as num?)?.toInt() ?? 0,
+      lightPoints: (json['light_points'] as List<dynamic>? ?? const [])
+          .map((e) => LightPoint.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+    );
+  }
+
+  double get yearProgress =>
+      yearTarget <= 0 ? 0 : (yearCount / yearTarget).clamp(0.0, 1.0);
+}
+
+/// 树页光点（= 一次打卡）。
+class LightPoint {
+  final String date;
+  final int category;
+
+  const LightPoint({required this.date, required this.category});
+
+  factory LightPoint.fromJson(Map<String, dynamic> json) => LightPoint(
+        date: json['date'] as String? ?? '',
+        category: (json['category'] as num?)?.toInt() ?? 1,
+      );
+}
+
+/// 徽章（对齐后端 BadgeVO）。
+class BadgeVO {
+  final String code;
+  final String name;
+  final String icon;
+  final String description;
+  final bool owned;
+  final DateTime? earnedAt;
+
+  const BadgeVO({
+    required this.code,
+    required this.name,
+    required this.icon,
+    required this.description,
+    required this.owned,
+    this.earnedAt,
+  });
+
+  factory BadgeVO.fromJson(Map<String, dynamic> json) => BadgeVO(
+        code: json['code'] as String? ?? '',
+        name: json['name'] as String? ?? '',
+        icon: json['icon'] as String? ?? '',
+        description: json['description'] as String? ?? '',
+        owned: json['owned'] == true,
+        earnedAt: json['earned_at'] != null
+            ? DateTime.tryParse(json['earned_at'] as String)
+            : null,
+      );
+}

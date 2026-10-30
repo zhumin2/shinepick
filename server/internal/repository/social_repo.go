@@ -23,6 +23,13 @@ func (r *SocialRepo) DB() *gorm.DB { return r.db }
 // aggWindow 同类聚合窗口（技术文档 6.3：10 分钟）。
 const aggWindow = 10 * time.Minute
 
+// NotifySystem 系统通知（徽章获得等，type 5，触发者即自己不展示）。
+func (r *SocialRepo) NotifySystem(ctx context.Context, uid int64, copy string) error {
+	return r.db.WithContext(ctx).Create(&model.Notification{
+		UserID: uid, Type: 5, AggCount: 1, Extra: copy,
+	}).Error
+}
+
 // Notify 记录一条通知；同（接收者,类型,打卡,触发者）在聚合窗口内的未读通知合并计数。
 // actorID 为 nil 表示匿名文案（非互相同路的点亮/拥抱）。
 func (r *SocialRepo) Notify(ctx context.Context, n *model.Notification) error {

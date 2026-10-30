@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:shinepick/core/router/app_router.dart';
 import 'package:shinepick/features/auth/auth_controller.dart';
 import 'package:shinepick/features/checkin/checkin_controller.dart';
+import 'package:shinepick/features/garden/garden_controller.dart';
 import 'package:shinepick/features/social/social_controller.dart';
 import 'package:shinepick/shared/models/user.dart';
 import 'package:shinepick/shared/storage/token_store.dart';
@@ -48,6 +49,7 @@ void main() {
           ChangeNotifierProvider.value(value: auth),
           ChangeNotifierProvider.value(value: CheckinController(auth)),
           ChangeNotifierProvider.value(value: SocialController(auth)),
+          ChangeNotifierProvider.value(value: GardenController(auth)),
         ],
         child: MaterialApp.router(
           routerConfig: AppRouter.createRouter(auth),

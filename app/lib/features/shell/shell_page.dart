@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../discover/discover_page.dart';
+import '../garden/garden_page.dart';
 import '../home/home_page.dart';
 import '../profile/profile_page.dart';
 import '../social/social_controller.dart';
@@ -35,6 +36,7 @@ class _ShellPageState extends State<ShellPage> {
         children: const [
           HomePage(embedded: true),
           DiscoverPage(),
+          GardenPage(),
           ProfilePage(embedded: true),
         ],
       ),
@@ -54,6 +56,11 @@ class _ShellPageState extends State<ShellPage> {
             icon: Icon(Icons.explore_outlined),
             selectedIcon: Icon(Icons.explore, color: AppTheme.primaryDark),
             label: '发现',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.park_outlined),
+            selectedIcon: Icon(Icons.park, color: AppTheme.primaryDark),
+            label: '拾光树',
           ),
           NavigationDestination(
             icon: _MeIcon(showDot: unread > 0, filled: false),

@@ -182,6 +182,52 @@ void main() {
     });
   });
 
+  group('S7 拾光树模型', () {
+    test('TreeVO 解析 + 年进度 clamp', () {
+      final t = TreeVO.fromJson({
+        'level': 3,
+        'points': 8,
+        'season': 3,
+        'year_count': 8,
+        'year_target': 300,
+        'streak_days': 1,
+        'total': 8,
+        'light_points': [
+          {'date': '2026-10-31', 'category': 1},
+          {'date': '2026-10-30', 'category': 2},
+        ],
+      });
+      expect(t.level, 3);
+      expect(t.season, 3);
+      expect(t.lightPoints.length, 2);
+      expect(t.lightPoints[0].category, 1);
+      expect(t.yearProgress, closeTo(8 / 300, 0.0001));
+      // 目标为 0 时不除零
+      final z = TreeVO.fromJson({
+        'level': 1, 'points': 0, 'season': 1,
+        'year_count': 0, 'year_target': 0,
+        'streak_days': 0, 'total': 0, 'light_points': [],
+      });
+      expect(z.yearProgress, 0);
+    });
+
+    test('BadgeVO 已得/未得解析', () {
+      final owned = BadgeVO.fromJson({
+        'code': 'first_light', 'name': '第一颗光点', 'icon': 'wb_sunny',
+        'description': '完成第一次打卡', 'owned': true,
+        'earned_at': '2026-10-31T10:00:00',
+      });
+      expect(owned.owned, isTrue);
+      expect(owned.earnedAt, isNotNull);
+      final locked = BadgeVO.fromJson({
+        'code': 'streak_7', 'name': '七日不辍', 'icon': 'eco',
+        'description': '连续打卡 7 天', 'owned': false,
+      });
+      expect(locked.owned, isFalse);
+      expect(locked.earnedAt, isNull);
+    });
+  });
+
   group('Checkin 时间标签', () {
     testWidgets('今天显示时刻，昨天带「昨天」，更早带日期', (tester) async {
       final now = DateTime.now();

@@ -85,6 +85,13 @@ type CheckinService struct {
 	urepo *repository.UserRepo
 	rdb   *redis.Client
 	aud   audit.Auditor
+
+	onPublished func(ctx context.Context, uid, checkinID int64) // 发布后回调（S7 徽章评估）
+}
+
+// SetOnPublished 注册发布后回调（徽章评估，S7）。
+func (s *CheckinService) SetOnPublished(f func(ctx context.Context, uid, checkinID int64)) {
+	s.onPublished = f
 }
 
 func NewCheckinService(
@@ -169,6 +176,9 @@ func (s *CheckinService) Create(ctx context.Context, uid int64, req *CreateCheck
 	}
 	if idemKey != "" {
 		s.rdb.Set(ctx, idemKey, created.ID, checkinIdemTTL)
+	}
+	if s.onPublished != nil {
+		s.onPublished(ctx, uid, created.ID) // S7：徽章评估
 	}
 	tree, _, err := s.repo.TreeByUser(ctx, uid)
 	if err != nil {

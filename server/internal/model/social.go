@@ -11,6 +11,7 @@ type Notification struct {
 	CheckinID *int64    `gorm:"column:checkin_id" json:"checkin_id,omitempty"`
 	CommentID *int64    `gorm:"column:comment_id" json:"comment_id,omitempty"`
 	AggCount  int32     `gorm:"column:agg_count" json:"agg_count"`
+	Extra     string    `gorm:"column:extra;size:140" json:"extra,omitempty"` // type=5 系统文案
 	IsRead    int8      `gorm:"column:is_read" json:"is_read"`
 	CreatedAt time.Time `json:"created_at"`
 }

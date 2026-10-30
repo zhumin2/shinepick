@@ -72,6 +72,7 @@ type NotificationVO struct {
 	CheckinID *int64    `json:"checkin_id,omitempty"`
 	CommentID *int64    `json:"comment_id,omitempty"`
 	AggCount  int32     `json:"agg_count"`
+	Extra     string    `json:"extra,omitempty"`
 	Copy      string    `json:"copy"`
 	IsRead    bool      `json:"is_read"`
 	CreatedAt time.Time `json:"created_at"`
@@ -115,7 +116,7 @@ func buildNotificationVO(n *model.Notification, names map[int64]string) *Notific
 	vo := &NotificationVO{
 		ID: n.ID, Type: n.Type, ActorID: n.ActorID,
 		CheckinID: n.CheckinID, CommentID: n.CommentID,
-		AggCount: n.AggCount, IsRead: n.IsRead == 1,
+		AggCount: n.AggCount, Extra: n.Extra, IsRead: n.IsRead == 1,
 	}
 	if n.ActorID != nil {
 		vo.ActorName = names[*n.ActorID]
@@ -142,6 +143,12 @@ func buildNotificationVO(n *model.Notification, names map[int64]string) *Notific
 		vo.Copy = fmt.Sprintf("%s 和你同路了，你们可以互相看见彼此的拾光", vo.ActorName)
 	case n.Type == 4:
 		vo.Copy = fmt.Sprintf("%s 留言了你的拾光", vo.ActorName)
+	case n.Type == 5:
+		if n.Extra != "" {
+			vo.Copy = n.Extra
+		} else {
+			vo.Copy = "你有新的系统消息"
+		}
 	default:
 		vo.Copy = "你有新的消息"
 	}
@@ -151,6 +158,11 @@ func buildNotificationVO(n *model.Notification, names map[int64]string) *Notific
 // MarkAllRead 全部已读。
 func (s *SocialService) MarkAllRead(ctx context.Context, uid int64) error {
 	return s.social.MarkAllRead(ctx, uid)
+}
+
+// NotifySystem 系统通知透传（徽章获得等，type 5）。
+func (s *SocialService) NotifySystem(ctx context.Context, uid int64, copyText string) {
+	_ = s.social.NotifySystem(ctx, uid, copyText)
 }
 
 // ---- 拉黑 ----
