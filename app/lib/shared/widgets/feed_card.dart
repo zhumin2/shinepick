@@ -191,7 +191,7 @@ extension on Checkin {
   }
 }
 
-/// 单条留言预览：小便签的视觉（作者指定的带小星标）。
+/// 单条留言预览：小头像 + 昵称 + 一句话（作者指定的末尾带图钉）。
 class _PreviewLine extends StatelessWidget {
   final CommentVO comment;
   const _PreviewLine({required this.comment});
@@ -199,16 +199,9 @@ class _PreviewLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          comment.isFeatured ? Icons.push_pin_outlined : Icons.chat_bubble_outline,
-          size: 12,
-          color: comment.isFeatured
-              ? AppTheme.primary
-              : AppTheme.textSub.withValues(alpha: 0.7),
-        ),
-        const SizedBox(width: 6),
+        Avatar(url: comment.avatarUrl, nickname: comment.nickname, size: 20),
+        const SizedBox(width: 7),
         Text(comment.nickname,
             style: const TextStyle(
                 fontSize: 12,
@@ -224,6 +217,11 @@ class _PreviewLine extends StatelessWidget {
                 fontSize: 12, height: 1.4, color: AppTheme.textMain),
           ),
         ),
+        if (comment.isFeatured) ...[
+          const SizedBox(width: 4),
+          const Icon(Icons.push_pin_outlined,
+              size: 12, color: AppTheme.primary),
+        ],
       ],
     );
   }
