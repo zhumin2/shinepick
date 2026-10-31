@@ -10,6 +10,15 @@ if [ -z "$SERVER_ADDR" ]; then
   exit 1
 fi
 
+echo "==== 0/3 复制随仓库分发的图片文件 ===="
+SRC="$(cd "$(dirname "$0")" && pwd)"
+if [ -d "${SRC}/uploads" ]; then
+  mkdir -p /opt/shinepick/uploads
+  cp -r "${SRC}/uploads/avatars" "${SRC}/uploads/images" /opt/shinepick/uploads/ 2>/dev/null || true
+  chown -R shinepick:shinepick /opt/shinepick/uploads 2>/dev/null || true
+  echo "  已复制 avatars/images"
+fi
+
 echo "==== 1/3 数据库图片 URL 改为 http://${SERVER_ADDR}:8080 ===="
 mysql -D shinepick -e "
 UPDATE users SET avatar_url = REPLACE(avatar_url, 'http://127.0.0.1:8080', 'http://${SERVER_ADDR}:8080') WHERE avatar_url LIKE '%127.0.0.1:8080%';

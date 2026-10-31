@@ -32,6 +32,8 @@ mkdir -p "$BASE"/uploads/{avatars,images,web} "$BASE"/migrations
 install -m 0755 "${SRC}/shinepick-api-linux-amd64" "$BASE/shinepick-api"
 cp -r "${SRC}"/migrations/* "$BASE/migrations/" 2>/dev/null || true
 [ -d "${SRC}/web" ] && cp -r "${SRC}/web" "$BASE/uploads/"
+[ -d "${SRC}/uploads/avatars" ] && cp -r "${SRC}/uploads/avatars" "$BASE/uploads/" 2>/dev/null || true
+[ -d "${SRC}/uploads/images" ] && cp -r "${SRC}/uploads/images" "$BASE/uploads/" 2>/dev/null || true
 chown -R shinepick:shinepick "$BASE"
 
 echo "==== 5/6 环境配置 ===="
