@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# 拾光 ShinePick · Linux 服务端安装（Ubuntu 22.04+/Debian 12）
+# 拾光 ShinePick · Linux 服务端安装
+# 支持: Ubuntu/Debian (apt) + OpenCloudOS/CentOS/RHEL (dnf/yum)
 # 用法: sudo ./install.sh
 set -euo pipefail
 
@@ -9,21 +10,68 @@ DB_PASS="${DB_PASS:-CHANGE_ME}"
 
 if [ "$(id -u)" -ne 0 ]; then echo "请用 sudo 运行"; exit 1; fi
 
-echo "==== 1/6 系统依赖 (MySQL8 + Redis) ===="
-apt-get update -qq
-apt-get install -y -qq mysql-server redis-server curl >/dev/null
-systemctl enable --now mysql redis-server
+# ---- 检测包管理器 ----
+if command -v apt-get &>/dev/null; then
+  PKG_MGR=apt
+elif command -v dnf &>/dev/null; then
+  PKG_MGR=dnf
+elif command -v yum &>/dev/null; then
+  PKG_MGR=yum
+else
+  echo "不支持的发行版：未找到 apt-get / dnf / yum"
+  exit 1
+fi
+echo "包管理器: $PKG_MGR"
 
-echo "==== 2/6 数据库（用户/密码/建库） ===="
-mysql -e "CREATE DATABASE IF NOT EXISTS shinepick CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-mysql -e "CREATE USER IF NOT EXISTS 'shinepick'@'localhost' IDENTIFIED BY '${DB_PASS}';"
-mysql -e "GRANT ALL PRIVILEGES ON shinepick.* TO 'shinepick'@'localhost'; FLUSH PRIVILEGES;"
+echo "==== 1/6 系统依赖 (MySQL + Redis) ===="
+if [ "$PKG_MGR" = "apt" ]; then
+  apt-get update -qq
+  apt-get install -y -qq mysql-server redis-server curl >/dev/null
+  systemctl enable --now mysql redis-server
+else
+  # OpenCloudOS / CentOS / RHEL
+  $PKG_MGR install -y -q mysql-server redis curl >/dev/null 2>&1 ||     $PKG_MGR install -y -q mysql-community-server redis curl >/dev/null 2>&1 ||     { echo "请手动安装 MySQL 和 Redis 后重跑（跳过此步）"; }
+  systemctl enable --now mysqld 2>/dev/null || systemctl enable --now mysql 2>/dev/null || true
+  systemctl enable --now redis 2>/dev/null || systemctl enable --now redis-server 2>/dev/null || true
+  # 等待 MySQL 就绪
+  for i in $(seq 1 30); do
+    mysqladmin ping &>/dev/null && break
+    sleep 1
+  done
+fi
+
+echo "==== 2/6 数据库（建库/授权） ===="
+# MySQL root 密码处理：apt 装=免密；yum 装=可能需要临时密码或已有密码
+if [ "$PKG_MGR" = "apt" ]; then
+  mysql -e "CREATE DATABASE IF NOT EXISTS shinepick CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+  mysql -e "CREATE USER IF NOT EXISTS 'shinepick'@'localhost' IDENTIFIED BY '${DB_PASS}';"
+  mysql -e "GRANT ALL PRIVILEGES ON shinepick.* TO 'shinepick'@'localhost'; FLUSH PRIVILEGES;"
+else
+  # RHEL 系：root 可能有临时密码或已有密码
+  if mysql -u root -e "SELECT 1" &>/dev/null; then
+    mysql -e "CREATE DATABASE IF NOT EXISTS shinepick CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+    mysql -e "CREATE USER IF NOT EXISTS 'shinepick'@'localhost' IDENTIFIED BY '${DB_PASS}';"
+    mysql -e "GRANT ALL PRIVILEGES ON shinepick.* TO 'shinepick'@'localhost'; FLUSH PRIVILEGES;"
+  else
+    echo "  MySQL root 需要密码（请设置 DB_ROOT_PASS 环境变量）"
+    echo "  手动执行:"
+    echo "    mysql -u root -p -e \"CREATE DATABASE IF NOT EXISTS shinepick CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\""
+    echo "    mysql -u root -p -e \"CREATE USER IF NOT EXISTS 'shinepick'@'localhost' IDENTIFIED BY '${DB_PASS}';\""
+    echo "    mysql -u root -p -e \"GRANT ALL PRIVILEGES ON shinepick.* TO 'shinepick'@'localhost'; FLUSH PRIVILEGES;\""
+    echo "  然后重跑本脚本。"
+    exit 1
+  fi
+fi
 
 echo "==== 3/6 迁移（跳过 rollback 脚本） ===="
+MYSQL_CMD="mysql"
+if [ "$PKG_MGR" != "apt" ]; then
+  MYSQL_CMD="mysql -u shinepick -p${DB_PASS}"
+fi
 for f in "${SRC}"/migrations/0*.sql; do
   case "$f" in *rollback*) echo "  - $(basename "$f") skipped"; continue;; esac
   echo "  - $(basename "$f")"
-  mysql --default-character-set=utf8mb4 -D shinepick < "$f"
+  $MYSQL_CMD --default-character-set=utf8mb4 -D shinepick < "$f"
 done
 
 echo "==== 4/6 程序与目录 ===="
@@ -38,8 +86,7 @@ chown -R shinepick:shinepick "$BASE"
 
 echo "==== 5/6 环境配置 ===="
 if [ ! -f "$BASE/shinepick.env" ]; then
-  sed "s/CHANGE_ME@/${DB_PASS}@/; s|UPLOAD_DIR=.*|UPLOAD_DIR=${BASE}/uploads|" \
-    "${SRC}/shinepick.env" > "$BASE/shinepick.env"
+  sed "s/CHANGE_ME@/${DB_PASS}@/; s|UPLOAD_DIR=.*|UPLOAD_DIR=${BASE}/uploads|"     "${SRC}/shinepick.env" > "$BASE/shinepick.env"
   chmod 600 "$BASE/shinepick.env"
   echo "  已生成 $BASE/shinepick.env —— 请手工改 JWT_SECRET / PUBLIC_BASE_URL / ADMIN_TOKEN"
 fi
