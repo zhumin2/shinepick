@@ -1,0 +1,22 @@
+[Unit]
+Description=ShinePick API Server (Go)
+After=network.target mysql.service redis-server.service
+Wants=mysql.service redis-server.service
+
+[Service]
+Type=simple
+User=shinepick
+Group=shinepick
+WorkingDirectory=/opt/shinepick
+EnvironmentFile=/opt/shinepick/shinepick.env
+ExecStart=/opt/shinepick/shinepick-api
+Restart=always
+RestartSec=5
+# 端口能力（<1024 需时用 Nginx 反代，故默认 8080）
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/shinepick/uploads
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
