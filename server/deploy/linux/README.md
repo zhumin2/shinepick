@@ -4,7 +4,9 @@
 
 ## 路线 A：二进制 + systemd（推荐单机）
 
-包内容：`shinepick-api-linux-amd64`（或 arm64）、`migrations/`、`shinepick-api.service`、`shinepick.env`、`install.sh`
+包内容：`shinepick-api-linux-amd64`（或 arm64）、`migrations/`、`web/`（Web 前端构建产物，随仓库分发）、`shinepick-api.service`、`shinepick.env`、`install.sh`
+
+> Web 前端更新流程：Windows 上 `flutter build web --release --base-href /static/web/` 后，把 `app/build/web` 覆盖到本目录 `web/` 并提交；服务器 `git pull` 后重跑 `sudo ./install.sh`（或手工 cp 到 /opt/shinepick/uploads/web）。
 
 ```bash
 # 1. 上传整个 linux/ 目录到服务器，解压后：

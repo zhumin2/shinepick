@@ -30,3 +30,6 @@ app/ios/Pods/
 
 # Android 构建产物
 app/android/build/
+
+# Windows reserved name leak guard
+nul
