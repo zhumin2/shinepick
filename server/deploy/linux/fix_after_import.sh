@@ -20,12 +20,27 @@ if [ -d "${SRC}/uploads" ]; then
 fi
 
 echo "==== 1/3 数据库图片 URL 改为 http://${SERVER_ADDR}:8080 ===="
-mysql -D shinepick -e "
+
+# 数据库凭据：自动从 shinepick.env 的 DB_DSN 解析（也可用 DB_USER/DB_PASS 环境变量覆盖）
+ENVF=/opt/shinepick/shinepick.env
+DB_USER="${DB_USER:-root}"
+DB_PASS="${DB_PASS:-}"
+DB_PORT="${DB_PORT:-3306}"
+if [ -z "$DB_PASS" ] && [ -f "$ENVF" ]; then
+  DB_USER=$(sed -n 's/^DB_DSN=\([^:]*\):.*@tcp.*//p' "$ENVF")
+  DB_PASS=$(sed -n 's/^DB_DSN=[^:]*:\([^@]*\)@tcp.*//p' "$ENVF")
+  P=$(sed -n 's/^DB_DSN=[^@]*@tcp([^:]*):\([0-9]*\)).*//p' "$ENVF")
+  [ -n "$P" ] && DB_PORT="$P"
+  echo "  已从 shinepick.env 读取数据库配置（用户 ${DB_USER}，端口 ${DB_PORT}）"
+fi
+MYSQL="mysql -h 127.0.0.1 -P ${DB_PORT} --protocol=tcp -u ${DB_USER} -p${DB_PASS}"
+
+$MYSQL -D shinepick -e "
 UPDATE users SET avatar_url = REPLACE(avatar_url, 'http://127.0.0.1:8080', 'http://${SERVER_ADDR}:8080') WHERE avatar_url LIKE '%127.0.0.1:8080%';
 UPDATE checkins SET image_urls = REPLACE(image_urls, 'http://127.0.0.1:8080', 'http://${SERVER_ADDR}:8080') WHERE image_urls LIKE '%127.0.0.1:8080%';
 "
 echo "  剩余 127.0.0.1 引用（应为 0）："
-mysql -N -D shinepick -e "
+$MYSQL -N -D shinepick -e "
   SELECT (SELECT COUNT(*) FROM users WHERE avatar_url LIKE '%127.0.0.1%')
        + (SELECT COUNT(*) FROM checkins WHERE image_urls LIKE '%127.0.0.1%');"
 
