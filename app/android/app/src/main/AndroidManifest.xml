@@ -1,8 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 内测阶段 API 走 http 明文（129.226.159.168:8080）；接 HTTPS 后可移除 -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="shinepick"
+        android:label="拾光"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
