@@ -1,5 +1,23 @@
 import 'package:flutter/material.dart';
 
+/// 友好时间标签（打卡/留言/通知共用）：
+/// 今天 → HH:mm；昨天 → 昨天 HH:mm；今年 → MM-DD HH:mm；跨年 → yyyy-MM-DD HH:mm。
+String friendlyTime(DateTime? t) {
+  if (t == null) return '';
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final day = DateTime(t.year, t.month, t.day);
+  final hm =
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+  final diffDays = today.difference(day).inDays;
+  if (diffDays <= 0) return hm; // 今天
+  if (diffDays == 1) return '昨天 $hm';
+  final md =
+      '${t.month.toString().padLeft(2, '0')}-${t.day.toString().padLeft(2, '0')}';
+  if (t.year == now.year) return '$md $hm';
+  return '${t.year}-$md $hm';
+}
+
 /// 打卡品类（对齐产品设计文档 §3.2 五大品类；6=自定义 S3 暂不开放）。
 enum CheckinCategory {
   sport(1, '运动', Color(0xFFE89B3C)),
@@ -223,15 +241,8 @@ class CommentVO {
         createdAt: createdAt,
       );
 
-  /// 相对时间：刚刚 / N 分钟前 / HH:mm。
-  String get timeLabel {
-    final t = createdAt;
-    if (t == null) return '';
-    final diff = DateTime.now().difference(t);
-    if (diff.inMinutes < 1) return '刚刚';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} 分钟前';
-    return '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-  }
+  /// 时间标签：带日期语义（今天 HH:mm / 昨天 HH:mm / MM-DD HH:mm）。
+  String get timeLabel => friendlyTime(createdAt);
 }
 
 /// 应用内通知（对齐后端 NotificationVO）。

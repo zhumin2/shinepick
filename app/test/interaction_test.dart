@@ -74,7 +74,11 @@ void main() {
       });
       expect(c.nickname, 'pig');
       expect(c.content, '江边跑步真的舒服');
-      expect(c.timeLabel, '5 分钟前');
+      // 新规则：今天 → HH:mm（不再用相对时间）
+      final t = DateTime.now().subtract(const Duration(minutes: 5));
+      final hm =
+          '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+      expect(c.timeLabel, hm);
     });
   });
 
@@ -179,6 +183,46 @@ void main() {
         ),
       ));
       expect(find.byIcon(Icons.push_pin_outlined), findsNothing);
+    });
+  });
+
+  group('留言时间标签（friendlyTime）', () {
+    test('今天带时刻，昨天带「昨天」，更早带日期', () {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      CommentVO at(DateTime t) => CommentVO.fromJson({
+            'id': 1,
+            'checkin_id': 1,
+            'user_id': 2,
+            'nickname': 'pig',
+            'avatar_url': '',
+            'content': 'x',
+            'created_at': t.toIso8601String(),
+          });
+
+      // 今天 09:05 → 09:05
+      final c1 = at(DateTime(today.year, today.month, today.day, 9, 5));
+      expect(c1.timeLabel, '09:05');
+
+      // 昨天 21:30 → 昨天 21:30
+      final y = today.subtract(const Duration(days: 1));
+      final c2 = at(DateTime(y.year, y.month, y.day, 21, 30));
+      expect(c2.timeLabel, '昨天 21:30');
+
+      // 30 天前 → MM-DD HH:mm
+      final old = today.subtract(const Duration(days: 30));
+      final c3 = at(DateTime(old.year, old.month, old.day, 8, 0));
+      final mmdd =
+          '${old.month.toString().padLeft(2, '0')}-${old.day.toString().padLeft(2, '0')}';
+      expect(c3.timeLabel, '$mmdd 08:00');
+    });
+
+    test('createdAt 缺失时空串（列表回退不显示时间）', () {
+      final c = CommentVO.fromJson({
+        'id': 2, 'checkin_id': 1, 'user_id': 2,
+        'nickname': 'pig', 'avatar_url': '', 'content': 'x',
+      });
+      expect(c.timeLabel, '');
     });
   });
 
