@@ -33,3 +33,6 @@ app/android/build/
 
 # Windows reserved name leak guard
 nul
+
+# 数据库导出产物（防止误提交/误导入覆盖服务器数据）
+shinepick-data.sql
