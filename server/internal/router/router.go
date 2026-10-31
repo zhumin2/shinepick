@@ -2,6 +2,7 @@ package router
 
 import (
 	"context"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -65,6 +66,15 @@ func Register(ctx context.Context, e *gin.Engine, db *gorm.DB, rdb *redis.Client
 	service.StartDailyCron(ctx, feedSvc)
 
 	upload.NewHandler(cfg.UploadDir, cfg.PublicBaseURL).Register(authed)
+
+	// Web 客户端禁缓存：每次都向服务器校验新鲜度，
+	// 避免发版后浏览器继续用旧的 main.dart.js（用户反馈过看不到新功能）
+	e.Use(func(c *gin.Context) {
+		if strings.HasPrefix(c.Request.URL.Path, "/static/web") {
+			c.Header("Cache-Control", "no-cache, must-revalidate")
+		}
+		c.Next()
+	})
 
 	// 静态资源（dev 本地驱动上传的文件；生产换 OSS + CDN）
 	e.Static("/static", cfg.UploadDir)
