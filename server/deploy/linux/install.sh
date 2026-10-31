@@ -98,6 +98,12 @@ systemctl enable --now shinepick-api
 sleep 2
 systemctl --no-pager status shinepick-api | head -5
 
+# 安装管理脚本到系统路径
+if [ -f "${SRC}/shinepick.sh" ]; then
+  install -m 0755 "${SRC}/shinepick.sh" /usr/local/bin/shinepick
+  echo "  管理脚本已安装: shinepick <start|stop|status|health|logs|backup|update>"
+fi
+
 echo
 echo "==== 安装完成 ===="
 echo "健康检查: curl http://127.0.0.1:8080/ping"
