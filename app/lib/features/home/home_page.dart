@@ -11,6 +11,7 @@ import '../../shared/widgets/toast.dart';
 import '../auth/auth_controller.dart';
 import '../checkin/checkin_controller.dart';
 import '../comment/comment_sheet.dart';
+import '../social/social_controller.dart';
 
 /// 今日页：问候 + 今日卡（N/5 + 品类勾选）+ 同品类横滑 + 今日微光 + 我的拾光。
 /// 打卡入口在底部导航中央凸起按钮（ShellPage），发布成功由壳层展示仪式感动画。
@@ -37,6 +38,57 @@ class _HomePageState extends State<HomePage> {
     final c = context.read<CheckinController>();
     await c.load();
     await c.loadFeed();
+  }
+
+  /// 长按他人卡片：举报 / 拉黑（S8-03）。
+  Future<void> _longPress(FeedItem item) async {
+    final social = context.read<SocialController>();
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 14),
+            ListTile(
+              leading: const Icon(Icons.flag_outlined, color: AppTheme.textSub),
+              title: const Text('举报这条拾光',
+                  style: TextStyle(fontSize: 15, color: AppTheme.textMain)),
+              onTap: () => Navigator.pop(context, 'report'),
+            ),
+            ListTile(
+              leading:
+                  const Icon(Icons.block_outlined, color: AppTheme.textSub),
+              title: Text('拉黑 ${item.user.nickname}',
+                  style: const TextStyle(fontSize: 15, color: AppTheme.textMain)),
+              onTap: () => Navigator.pop(context, 'block'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (action == null || !mounted) return;
+    try {
+      if (action == 'report') {
+        await social.report(targetType: 1, targetId: item.checkin.id);
+        if (mounted) Toast.show(context, '已收到举报，我们会在 24 小时内处理');
+      } else if (action == 'block') {
+        await social.block(item.user.id);
+        if (mounted) {
+          Toast.show(context, '已拉黑，之后不会看到 Ta 的内容');
+          _refreshAll();
+        }
+      }
+    } on AppError catch (e) {
+      if (mounted) Toast.show(context, e.message);
+    } catch (_) {
+      if (mounted) Toast.show(context, '操作失败，请重试');
+    }
   }
 
   /// 互动与留言入口（S5-04/S5-05）。
@@ -152,14 +204,17 @@ class _HomePageState extends State<HomePage> {
               const _SectionTitle('今日微光'),
               const SizedBox(height: 10),
               for (final item in checkin.dailySelected)
-                FeedCard(
-                  checkin: item.checkin,
-                  nickname: item.user.nickname,
-                  avatarUrl: item.user.avatarUrl,
-                  onAction: (a) => _onAction(
-                    a,
-                    checkinId: item.checkin.id,
-                    ownerId: item.user.id,
+                GestureDetector(
+                  onLongPress: () => _longPress(item),
+                  child: FeedCard(
+                    checkin: item.checkin,
+                    nickname: item.user.nickname,
+                    avatarUrl: item.user.avatarUrl,
+                    onAction: (a) => _onAction(
+                      a,
+                      checkinId: item.checkin.id,
+                      ownerId: item.user.id,
+                    ),
                   ),
                 ),
               const SizedBox(height: 8),

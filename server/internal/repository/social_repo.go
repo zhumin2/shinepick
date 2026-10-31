@@ -149,6 +149,25 @@ func (r *SocialRepo) BlockedByList(ctx context.Context, uid int64) (map[int64]bo
 	return set, nil
 }
 
+// BlockedUserRow 我拉黑的用户（含资料，黑名单管理页用）。
+type BlockedUserRow struct {
+	UserID    int64  `json:"user_id"`
+	Nickname  string `json:"nickname"`
+	AvatarURL string `json:"avatar_url"`
+}
+
+// ListBlockedWithUser 我拉黑的用户列表。
+func (r *SocialRepo) ListBlockedWithUser(ctx context.Context, uid int64) ([]*BlockedUserRow, error) {
+	var rows []*BlockedUserRow
+	err := r.db.WithContext(ctx).Table("blocks").
+		Select("blocks.blocked_id AS user_id, users.nickname AS nickname, users.avatar_url AS avatar_url").
+		Joins("JOIN users ON users.id = blocks.blocked_id").
+		Where("blocks.blocker_id = ?", uid).
+		Order("blocks.id DESC").
+		Scan(&rows).Error
+	return rows, err
+}
+
 // IsBlocked 双向拉黑判断（a 拉黑 b 或 b 拉黑 a）。
 func (r *SocialRepo) IsBlocked(ctx context.Context, a, b int64) (bool, error) {
 	var n int64

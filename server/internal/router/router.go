@@ -10,6 +10,7 @@ import (
 
 	"shinepick/internal/config"
 	"shinepick/internal/middleware"
+	"shinepick/internal/module/admin"
 	"shinepick/internal/module/auth"
 	"shinepick/internal/module/checkin"
 	"shinepick/internal/module/feed"
@@ -64,6 +65,10 @@ func Register(ctx context.Context, e *gin.Engine, db *gorm.DB, rdb *redis.Client
 	feedSvc := service.NewFeedService(checkinRepo, rdb)
 	feed.NewHandler(feedSvc, interSvc, socialSvc).Register(authed)
 	service.StartDailyCron(ctx, feedSvc)
+
+	// 运营接口（S8-01/05：精选管理 + 数据面板，X-Admin-Token 鉴权）
+	adminSvc := service.NewAdminService(db, feedSvc)
+	admin.NewHandler(adminSvc, feedSvc, cfg).Register(e)
 
 	upload.NewHandler(cfg.UploadDir, cfg.PublicBaseURL).Register(authed)
 

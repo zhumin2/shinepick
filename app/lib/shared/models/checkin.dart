@@ -394,3 +394,23 @@ class BadgeVO {
             : null,
       );
 }
+
+
+/// 黑名单条目（对齐后端 BlockedUserRow）。
+class BlockedUser {
+  final int userId;
+  final String nickname;
+  final String avatarUrl;
+
+  const BlockedUser({
+    required this.userId,
+    required this.nickname,
+    required this.avatarUrl,
+  });
+
+  factory BlockedUser.fromJson(Map<String, dynamic> json) => BlockedUser(
+        userId: (json['user_id'] as num).toInt(),
+        nickname: json['nickname'] as String? ?? '',
+        avatarUrl: json['avatar_url'] as String? ?? '',
+      );
+}

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -234,6 +235,38 @@ func (s *FeedService) Explore(ctx context.Context, category int8, cursor int64) 
 		out = append(out, toFeedItem(c))
 	}
 	return out, next, nil
+}
+
+// SetDailySelected 运营指定精选（S8-01）：校验存在且同路人可见后写入缓存，
+// 当日 24h 内有效（次日 08:00 cron 恢复规则模型）。
+func (s *FeedService) SetDailySelected(ctx context.Context, ids []int64) ([]*FeedItem, error) {
+	if len(ids) == 0 || len(ids) > dailySelectedN {
+		return nil, &ValidationError{msg: fmt.Sprintf("精选需为 1-%d 条", dailySelectedN)}
+	}
+	items := make([]*FeedItem, 0, len(ids))
+	for _, id := range ids {
+		c, err := s.repo.ByID(ctx, id)
+		if err != nil {
+			return nil, &ValidationError{msg: fmt.Sprintf("打卡 %d 不存在", id)}
+		}
+		if c.Visibility != 2 || c.Status != 0 {
+			return nil, &ValidationError{msg: fmt.Sprintf("打卡 %d 需为同路人可见的正常内容", id)}
+		}
+		cw, err := s.repo.GetWithUser(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, toFeedItem(cw))
+	}
+	s.rdb.Del(ctx, feedSelectedKey)
+	vals := make([]interface{}, 0, len(items))
+	for _, it := range items {
+		b, _ := json.Marshal(it)
+		vals = append(vals, string(b))
+	}
+	s.rdb.RPush(ctx, feedSelectedKey, vals...)
+	s.rdb.Expire(ctx, feedSelectedKey, 24*time.Hour)
+	return items, nil
 }
 
 // StartDailyCron 每日 08:00（东八区）重建精选（S4-02）。阻塞调用，go 程启动。

@@ -270,6 +270,9 @@ func applyPatch(u *model.User, p *ProfilePatch, now time.Time) (map[string]inter
 // cstZone 业务时区：东八区（技术文档 4.3 checkin_date 同口径）。
 var cstZone = time.FixedZone("CST", 8*3600)
 
+// CstZone 供其他模块取业务时区。
+func CstZone() *time.Location { return cstZone }
+
 // deriveMinor 未成年人标记：未满 18 周岁（按东八区日历计算）。
 func deriveMinor(birthday, now time.Time) int8 {
 	b := birthday.In(cstZone)

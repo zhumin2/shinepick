@@ -4,12 +4,12 @@ import "time"
 
 // Badge 徽章定义。
 type Badge struct {
-	ID            int64          `gorm:"primaryKey;autoIncrement" json:"id"`
-	Code          string         `gorm:"size:50;uniqueIndex" json:"code"`
-	Name          string         `gorm:"size:30" json:"name"`
-	Icon          string         `gorm:"size:30" json:"icon"`
-	Description   string         `gorm:"size:140" json:"description"`
-	ConditionJSON JSONRaw        `gorm:"column:condition_json;type:json" json:"-"`
+	ID            int64   `gorm:"primaryKey;autoIncrement" json:"id"`
+	Code          string  `gorm:"size:50;uniqueIndex" json:"code"`
+	Name          string  `gorm:"size:30" json:"name"`
+	Icon          string  `gorm:"size:30" json:"icon"`
+	Description   string  `gorm:"size:140" json:"description"`
+	ConditionJSON JSONRaw `gorm:"column:condition_json;type:json" json:"-"`
 }
 
 func (Badge) TableName() string { return "badges" }

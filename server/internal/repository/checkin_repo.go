@@ -132,6 +132,23 @@ func (r *CheckinRepo) ListTodayPublicByCategory(ctx context.Context, date string
 	return list, err
 }
 
+// GetWithUser 单条打卡 + 作者信息（运营精选指定用）。
+func (r *CheckinRepo) GetWithUser(ctx context.Context, id int64) (*CheckinWithUser, error) {
+	var cw CheckinWithUser
+	err := r.db.WithContext(ctx).Model(&model.Checkin{}).
+		Select(withUserSelect).
+		Joins("JOIN `users` ON `users`.`id` = `checkins`.`user_id`").
+		Where("checkins.id = ?", id).
+		Scan(&cw).Error
+	if err != nil {
+		return nil, err
+	}
+	if cw.ID == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return &cw, nil
+}
+
 // ListDailyCandidates 每日精选候选：日期内同路人可见打卡（含作者），新→旧。
 func (r *CheckinRepo) ListDailyCandidates(ctx context.Context, date string, limit int) ([]*CheckinWithUser, error) {
 	var list []*CheckinWithUser

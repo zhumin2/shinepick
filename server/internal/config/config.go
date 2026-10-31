@@ -16,6 +16,7 @@ type Config struct {
 	PublicBaseURL  string // 对外基础 URL（拼接静态资源链接）
 	AuditType      string // mock / remote（remote=独立 Python 审核服务）
 	AuditRemoteURL string
+	AdminToken     string // 运营接口令牌（X-Admin-Token 头；生产务必改掉默认值）
 }
 
 func Load() *Config {
@@ -32,6 +33,7 @@ func Load() *Config {
 		PublicBaseURL:  getenv("PUBLIC_BASE_URL", "http://127.0.0.1:8080"),
 		AuditType:      getenv("AUDIT_TYPE", "mock"),
 		AuditRemoteURL: getenv("AUDIT_REMOTE_URL", ""),
+		AdminToken:     getenv("ADMIN_TOKEN", "dev-admin-token"),
 	}
 }
 

@@ -71,6 +71,18 @@ class SocialController extends ChangeNotifier {
     await auth.api.post('/blocks', data: {'user_id': userId});
   }
 
+  /// 我拉黑的用户（黑名单管理页）。
+  Future<List<BlockedUser>> fetchBlocked() async {
+    final data = await auth.api.get<Map<String, dynamic>>(
+      '/blocks',
+      parser: (d) => Map<String, dynamic>.from(d as Map),
+    );
+    final raw = data['items'] as List<dynamic>? ?? const [];
+    return raw
+        .map((e) => BlockedUser.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
   /// 取消拉黑。
   Future<void> unblock(int userId) async {
     await auth.api.delete('/blocks/$userId');

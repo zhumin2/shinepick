@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/toast.dart';
+import '../../shared/models/checkin.dart';
 import '../auth/auth_controller.dart';
+import '../social/social_controller.dart';
 
 /// 设置页（S6-06）：夜间免打扰 + 情绪安全中心 + 退出登录。
 /// 推送通道（极光）待接入前，免打扰先作用于本地提醒偏好。
@@ -17,6 +19,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   bool _nightDnd = false;
+  List<BlockedUser> _blocked = [];
 
   @override
   void initState() {
@@ -28,6 +31,86 @@ class _SettingsPageState extends State<SettingsPage> {
         setState(() => _nightDnd = box.get('night_dnd', defaultValue: false) as bool);
       } catch (_) {}
     });
+    Future.microtask(_loadBlocked);
+  }
+
+  Future<void> _loadBlocked() async {
+    try {
+      final list = await context.read<SocialController>().fetchBlocked();
+      if (!mounted) return;
+      setState(() => _blocked = list);
+    } catch (_) {
+      // 弱网忽略
+    }
+  }
+
+  Future<void> _unblock(BlockedUser u) async {
+    try {
+      await context.read<SocialController>().unblock(u.userId);
+      if (!mounted) return;
+      Toast.show(context, '已取消拉黑 ${u.nickname}');
+      await _loadBlocked();
+    } catch (_) {
+      if (mounted) Toast.show(context, '操作失败，请重试');
+    }
+  }
+
+  Future<void> _manageBlocked() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSheet) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 14),
+              const Text('黑名单管理',
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textMain)),
+              const SizedBox(height: 6),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _blocked.length,
+                  itemBuilder: (_, i) {
+                    final u = _blocked[i];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: AppTheme.divider,
+                        child: Text(
+                            u.nickname.isEmpty
+                                ? '光'
+                                : u.nickname.characters.first,
+                            style: const TextStyle(
+                                fontSize: 13, color: AppTheme.textSub)),
+                      ),
+                      title: Text(u.nickname,
+                          style: const TextStyle(fontSize: 14)),
+                      trailing: TextButton(
+                        onPressed: () async {
+                          await _unblock(u);
+                          setSheet(() {});
+                        },
+                        child: const Text('取消拉黑',
+                            style: TextStyle(
+                                fontSize: 13, color: AppTheme.primary)),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _toggleNightDnd(bool v) async {
@@ -139,6 +222,17 @@ class _SettingsPageState extends State<SettingsPage> {
                   trailing: const Icon(Icons.chevron_right,
                       size: 18, color: AppTheme.textSub),
                   onTap: _showSafetyCenter,
+                ),
+                const Divider(height: 1, indent: 16, color: AppTheme.divider),
+                ListTile(
+                  title: const Text('黑名单管理',
+                      style: TextStyle(fontSize: 15, color: AppTheme.textMain)),
+                  subtitle: Text(
+                      _blocked.isEmpty ? '没有拉黑任何人' : '已拉黑 ${_blocked.length} 人',
+                      style: const TextStyle(fontSize: 12, color: AppTheme.textSub)),
+                  trailing: const Icon(Icons.chevron_right,
+                      size: 18, color: AppTheme.textSub),
+                  onTap: _blocked.isEmpty ? null : _manageBlocked,
                 ),
               ],
             ),

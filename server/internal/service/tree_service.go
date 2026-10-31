@@ -51,13 +51,13 @@ type LightPoint struct {
 
 // TreeVO GET /tree 响应。
 type TreeVO struct {
-	Level      int8         `json:"level"`
-	Points     int32        `json:"points"`
-	Season     int8         `json:"season"`
-	YearCount  int32        `json:"year_count"`
-	YearTarget int32        `json:"year_target"`
-	StreakDays int          `json:"streak_days"`
-	Total      int          `json:"total"`
+	Level       int8         `json:"level"`
+	Points      int32        `json:"points"`
+	Season      int8         `json:"season"`
+	YearCount   int32        `json:"year_count"`
+	YearTarget  int32        `json:"year_target"`
+	StreakDays  int          `json:"streak_days"`
+	Total       int          `json:"total"`
 	LightPoints []LightPoint `json:"light_points"`
 }
 
@@ -76,13 +76,13 @@ func (s *TreeService) Tree(ctx context.Context, uid int64) (*TreeVO, error) {
 
 	now := time.Now().In(cstZone)
 	vo := &TreeVO{
-		Level:      tree.Level,
-		Points:     tree.Points,
-		Season:     SeasonOf(now),
-		YearCount:  tree.YearCount,
-		YearTarget: tree.YearTarget,
-		StreakDays: streak,
-		Total:      int(total),
+		Level:       tree.Level,
+		Points:      tree.Points,
+		Season:      SeasonOf(now),
+		YearCount:   tree.YearCount,
+		YearTarget:  tree.YearTarget,
+		StreakDays:  streak,
+		Total:       int(total),
 		LightPoints: []LightPoint{},
 	}
 	// 光点历史：最近 100 条（性能兜底，技术文档 4.4）

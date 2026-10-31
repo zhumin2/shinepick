@@ -183,6 +183,11 @@ func (s *SocialService) Unblock(ctx context.Context, blocker, blocked int64) err
 	return s.social.Unblock(ctx, blocker, blocked)
 }
 
+// BlockedUsers 我拉黑的用户列表（黑名单管理页）。
+func (s *SocialService) BlockedUsers(ctx context.Context, uid int64) ([]*repository.BlockedUserRow, error) {
+	return s.social.ListBlockedWithUser(ctx, uid)
+}
+
 // BlockedSet 双向合并的黑名单（Feed 过滤用）：我拉黑的 + 拉黑我的。
 func (s *SocialService) BlockedSet(ctx context.Context, uid int64) (map[int64]bool, error) {
 	mine, err := s.social.BlockedIDs(ctx, uid)

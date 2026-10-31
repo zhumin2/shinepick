@@ -23,6 +23,7 @@ func (h *Handler) Register(r *gin.RouterGroup) {
 	r.GET("/notifications", h.List)
 	r.POST("/notifications/read", h.MarkAllRead)
 	r.POST("/blocks", h.Block)
+	r.GET("/blocks", h.ListBlocked)
 	r.DELETE("/blocks/:userId", h.Unblock)
 	r.POST("/reports", h.Report)
 }
@@ -63,6 +64,16 @@ func (h *Handler) Block(c *gin.Context) {
 		return
 	}
 	httpx.OK(c, gin.H{"blocked": true})
+}
+
+// ListBlocked GET /blocks —— 我拉黑的用户。
+func (h *Handler) ListBlocked(c *gin.Context) {
+	rows, err := h.svc.BlockedUsers(c, c.GetInt64("uid"))
+	if err != nil {
+		httpx.Fail(c, code.ErrInternal)
+		return
+	}
+	httpx.OK(c, gin.H{"items": rows})
 }
 
 // Unblock DELETE /blocks/:userId。
