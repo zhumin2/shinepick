@@ -316,15 +316,17 @@ class _CategoryTile extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 20,
-              height: 20,
+              width: 22,
+              height: 22,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isCustom ? AppTheme.divider : category.color,
               ),
-              child: isCustom
-                  ? const Icon(Icons.add, size: 14, color: AppTheme.textSub)
-                  : null,
+              child: Icon(
+                _categoryIcon(category),
+                size: 13,
+                color: isCustom ? AppTheme.textSub : Colors.white,
+              ),
             ),
             const SizedBox(height: 3),
             Text(
@@ -339,6 +341,23 @@ class _CategoryTile extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+IconData _categoryIcon(CheckinCategory c) {
+  switch (c) {
+    case CheckinCategory.sport:
+      return Icons.directions_run_outlined;
+    case CheckinCategory.read:
+      return Icons.menu_book_outlined;
+    case CheckinCategory.travel:
+      return Icons.flight_takeoff_outlined;
+    case CheckinCategory.social:
+      return Icons.groups_outlined;
+    case CheckinCategory.pet:
+      return Icons.pets_outlined;
+    default:
+      return Icons.add;
   }
 }
 
