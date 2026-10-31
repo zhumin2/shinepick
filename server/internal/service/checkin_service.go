@@ -112,12 +112,10 @@ func (s *CheckinService) Create(ctx context.Context, uid int64, req *CreateCheck
 	if req.Category < 1 || req.Category > 6 {
 		return nil, &ValidationError{msg: "品类不合法"}
 	}
+	// 自定义（category=6）= 统一兜底门类「其他」，不再要求自定义名称；
+	// 历史字段兼容：收到 custom_name 仍照常存储，但无业务含义
 	customName := strings.TrimSpace(req.CustomName)
-	if req.Category == 6 {
-		if n := len([]rune(customName)); n < 1 || n > 20 {
-			return nil, &ValidationError{msg: "请给自定义品类起个 1-20 字的名字"}
-		}
-	} else {
+	if req.Category != 6 {
 		customName = "" // 固定品类忽略自定义名
 	}
 	if req.Visibility < 1 || req.Visibility > 3 {

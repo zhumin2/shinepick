@@ -25,7 +25,7 @@ enum CheckinCategory {
   travel(3, '旅行', Color(0xFF7FA8C9)),
   social(4, '社交', Color(0xFFDDA5A0)),
   pet(5, '宠物', Color(0xFFD9B36C)),
-  custom(6, '自定义', Color(0xFFB8A6D9));
+  custom(6, '其他', Color(0xFFB8A6D9));
 
   const CheckinCategory(this.code, this.label, this.color);
   final int code;
@@ -148,14 +148,8 @@ class Checkin {
 
   CheckinCategory? get categoryEnum => CheckinCategory.byCode(category);
 
-  /// 展示名：自定义品类显示用户起的名字
-  String get categoryLabel {
-    if (category == CheckinCategory.custom.code &&
-        customName.isNotEmpty) {
-      return customName;
-    }
-    return categoryEnum?.label ?? '自定义';
-  }
+  /// 展示名（自定义=固定兜底门类「其他」）
+  String get categoryLabel => categoryEnum?.label ?? '其他';
 }
 
 /// Feed 条目作者信息。

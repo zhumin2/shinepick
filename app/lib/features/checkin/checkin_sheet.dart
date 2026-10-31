@@ -37,7 +37,6 @@ class _CheckinSheetState extends State<CheckinSheet> {
   final _content = TextEditingController();
   CheckinCategory _category = CheckinCategory.sport;
   CheckinVisibility _visibility = CheckinVisibility.companion;
-  String? _customName; // 自定义品类名（category=6 时必填）
   final _uploading = <String>[]; // 本地路径，上传中
   final _imageUrls = <String>[]; // 已上传 URL
   final _failed = <String>[]; // 上传失败的本地路径
@@ -75,43 +74,6 @@ class _CheckinSheetState extends State<CheckinSheet> {
     _content.removeListener(_onContentChanged);
     _content.dispose();
     super.dispose();
-  }
-
-  /// 自定义品类命名（产品 §3.2「需审核」：发布时随内容一起过审）。
-  Future<void> _nameCustomCategory() async {
-    final controller = TextEditingController(text: _customName ?? '');
-    final name = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLength: 20,
-          decoration: const InputDecoration(
-            labelText: '给你的品类起个名字',
-            hintText: '如：晨间散步、咖啡探店',
-            counterText: '',
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          TextButton(
-              onPressed: () => Navigator.pop(
-                  ctx, controller.text.trim()), child: const Text('确定')),
-        ],
-      ),
-    );
-    if (name == null) return;
-    if (name.isEmpty) {
-      if (mounted) Toast.show(context, '名字不能为空');
-      return;
-    }
-    if (!mounted) return;
-    setState(() {
-      _customName = name;
-      _category = CheckinCategory.custom;
-    });
   }
 
   Future<void> _pickImages() async {
@@ -161,15 +123,8 @@ class _CheckinSheetState extends State<CheckinSheet> {
       return;
     }
     try {
-      if (_category == CheckinCategory.custom &&
-          (_customName == null || _customName!.trim().isEmpty)) {
-        Toast.show(context, '请先给自定义品类起个名字');
-        return;
-      }
       await _checkin.publish(PublishCheckinReq(
         category: _category,
-        customName:
-            _category == CheckinCategory.custom ? _customName!.trim() : '',
         content: text,
         imageUrls: List.unmodifiable(_imageUrls),
         visibility: _visibility,
@@ -226,11 +181,7 @@ class _CheckinSheetState extends State<CheckinSheet> {
                   _CategoryTile(
                     category: c,
                     selected: _category == c,
-                    displayName:
-                        (c == CheckinCategory.custom) ? _customName : null,
-                    onTap: c == CheckinCategory.custom
-                        ? _nameCustomCategory
-                        : () => setState(() => _category = c),
+                    onTap: () => setState(() => _category = c),
                   ),
               ],
             ),
@@ -337,14 +288,10 @@ class _CategoryTile extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  /// 自定义品类已命名时显示该名字
-  final String? displayName;
-
   const _CategoryTile({
     required this.category,
     required this.selected,
     required this.onTap,
-    this.displayName,
   });
 
   @override
@@ -381,7 +328,7 @@ class _CategoryTile extends StatelessWidget {
             ),
             const SizedBox(height: 3),
             Text(
-              displayName ?? category.label,
+              category.label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(

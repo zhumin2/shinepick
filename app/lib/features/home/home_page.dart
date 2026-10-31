@@ -299,10 +299,13 @@ class _TodayCard extends StatelessWidget {
 
   String _categoryLine() {
     final names = ['运动', '阅读', '旅行', '社交', '宠物'];
-    return [
+    final line = [
       for (var i = 0; i < names.length; i++)
         '${names[i]}${doneCategories.contains(i + 1) ? ' ✓' : ''}',
     ].join(' · ');
+    // 自定义=兜底门类「其他」
+    final other = doneCategories.contains(CheckinCategory.custom.code);
+    return other ? '\$line · 其他 ✓' : line;
   }
 }
 
