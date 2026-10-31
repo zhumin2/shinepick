@@ -237,13 +237,16 @@ class CheckinController extends ChangeNotifier {
   // ---- S5-04 互动（乐观更新 + 失败回滚） ----
 
   /// 切换互动：已选中则取消，未选中则添加。同路额外建立同路人关系。
-  Future<void> toggleReaction(int checkinId, int type) async {
+  /// [currentlyActive] 供外部列表（如发现页）传入当前状态——
+  /// 不依赖 Controller 内部列表，保证 API 始终发出。
+  Future<void> toggleReaction(int checkinId, int type, {bool? currentlyActive}) async {
     final snapshot = _findCheckin(checkinId);
-    if (snapshot == null) return;
-    final active = snapshot.hasReaction(type);
-    // 乐观更新
-    _applyReaction(checkinId, type, add: !active);
-    notifyListeners();
+    final active = currentlyActive ?? snapshot?.hasReaction(type) ?? false;
+    if (snapshot != null) {
+      // 乐观更新（仅当打卡在 Controller 列表里时）
+      _applyReaction(checkinId, type, add: !active);
+      notifyListeners();
+    }
     try {
       if (active) {
         await auth.api.delete('/checkins/$checkinId/reactions?type=$type');
@@ -254,9 +257,11 @@ class CheckinController extends ChangeNotifier {
         );
       }
     } catch (_) {
-      // 回滚
-      _applyReaction(checkinId, type, add: active);
-      notifyListeners();
+      if (snapshot != null) {
+        // 回滚
+        _applyReaction(checkinId, type, add: active);
+        notifyListeners();
+      }
       rethrow;
     }
   }

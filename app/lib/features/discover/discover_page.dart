@@ -105,12 +105,27 @@ class _DiscoverPageState extends State<DiscoverPage> {
       _ => 0,
     };
     if (type == 0) return;
+    final isActive = item.checkin.hasReaction(type);
     try {
       await context.read<CheckinController>().toggleReaction(
             item.checkin.id,
             type,
+            currentlyActive: isActive,
           );
-      if (type == 3 && mounted) Toast.show(context, '已加入同路');
+      if (!mounted) return;
+      // 更新发现页本地列表（Controller 不管理发现页数据）
+      setState(() {
+        final idx = _items.indexWhere((it) => it.checkin.id == item.checkin.id);
+        if (idx >= 0) {
+          final reactions = Set<int>.from(_items[idx].checkin.myReactions);
+          isActive ? reactions.remove(type) : reactions.add(type);
+          final sorted = reactions.toList()..sort();
+          _items[idx] = _items[idx].copyWith(
+            checkin: _items[idx].checkin.copyWith(myReactions: sorted),
+          );
+        }
+      });
+      if (type == 3 && !isActive) Toast.show(context, '已加入同路');
     } on AppError catch (e) {
       if (mounted) Toast.show(context, e.message);
     } catch (_) {
