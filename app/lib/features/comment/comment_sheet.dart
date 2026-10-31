@@ -320,42 +320,58 @@ class _CommentSheetState extends State<CommentSheet> {
   Widget _buildInput() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _input,
-              maxLines: 1,
-              maxLength: 80,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _send(),
-              decoration: const InputDecoration(
-                hintText: '想对 Ta 说一句…',
-                counterText: '',
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      // 胶囊输入行（原型 comment-input-row：圆角 999 + 内嵌发送钮）
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 5, 5, 5),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: AppTheme.divider),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _input,
+                maxLines: 1,
+                maxLength: 80,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _send(),
+                style: const TextStyle(fontSize: 14),
+                decoration: const InputDecoration(
+                  hintText: '写一句温柔的话…',
+                  counterText: '',
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(vertical: 10),
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-          SizedBox(
-            height: 44,
-            child: FilledButton(
-              onPressed: _sending ? null : _send,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(64, 44),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: _sending ? null : _send,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                decoration: BoxDecoration(
+                  color: _sending ? AppTheme.textFaint : AppTheme.primary,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: _sending
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : const Text('发送',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white)),
               ),
-              child: _sending
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
-                  : const Text('发送', style: TextStyle(fontSize: 14)),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -130,6 +130,27 @@ class TreePainter extends CustomPainter {
         Paint()..color = shade.withValues(alpha: 0.92),
       );
     }
+    // 树冠琥珀光点（原型：树冠上亮着的心跳光）
+    for (var i = 0; i < 3; i++) {
+      final phase = (breath + i * 0.33) % 1.0;
+      final glow = 0.5 + 0.5 * sin(phase * 2 * pi);
+      final pos = [
+        const Offset(-14, -10),
+        const Offset(16, -18),
+        const Offset(0, -26),
+      ][i];
+      canvas.drawCircle(
+        Offset(cx + pos.dx, topY + pos.dy),
+        3.4 + 1.2 * glow,
+        Paint()..color = AppTheme.primary.withValues(alpha: 0.5 + 0.5 * glow),
+      );
+      canvas.drawCircle(
+        Offset(cx + pos.dx, topY + pos.dy),
+        8.0 + 3.0 * glow,
+        Paint()..color = AppTheme.primary.withValues(alpha: 0.14 * glow),
+      );
+    }
+
     // 冬季：枝头挂雪
     if (season == 4) {
       final snow = Paint()..color = Colors.white.withValues(alpha: 0.9);

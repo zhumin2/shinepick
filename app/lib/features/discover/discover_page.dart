@@ -267,19 +267,17 @@ class _DiscoverPageState extends State<DiscoverPage> {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected
-              ? AppTheme.primary.withValues(alpha: 0.15)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
+          color: selected ? AppTheme.textMain : Colors.white,
+          borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: selected ? AppTheme.primary : AppTheme.divider,
+            color: selected ? AppTheme.textMain : AppTheme.divider,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 13,
-            color: selected ? AppTheme.primaryDark : AppTheme.textSub,
+            color: selected ? Colors.white : AppTheme.textSub,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
           ),
         ),

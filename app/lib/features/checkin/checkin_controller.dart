@@ -55,6 +55,15 @@ class CheckinController extends ChangeNotifier {
     return _items.where((c) => c.checkinDate == today).length;
   }
 
+  /// 今日已打卡的品类集合（今日卡勾选态用）。
+  Set<int> get todayCategories {
+    final today = _todayLabel();
+    return {
+      for (final c in _items)
+        if (c.checkinDate == today) c.category,
+    };
+  }
+
   static String _todayLabel() {
     final now = DateTime.now();
     return '${now.year.toString().padLeft(4, '0')}-'

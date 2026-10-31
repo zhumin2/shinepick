@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/checkin.dart';
-import '../auth/auth_controller.dart';
 import 'garden_controller.dart';
 import 'tree_painter.dart';
 
@@ -39,7 +38,6 @@ class _GardenPageState extends State<GardenPage>
   @override
   Widget build(BuildContext context) {
     final garden = context.watch<GardenController>();
-    final nickname = context.watch<AuthController>().user?.nickname ?? '';
     final tree = garden.tree;
 
     return Scaffold(
@@ -53,40 +51,95 @@ class _GardenPageState extends State<GardenPage>
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                 children: [
-                  Center(
-                    child: Text(
-                      tree == null
-                          ? ''
-                          : '${treeStageName(tree.level)} · $nickname 的拾光树',
-                      style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textMain),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
+                  // 页头（原型 garden-head：连续天数强调 + 副句）
                   Center(
                     child: tree == null
                         ? const SizedBox()
-                        : Text(
-                            '${seasonName(tree.season)}季 · 已拾起 ${tree.points} 颗光点 · 连续 ${tree.streakDays} 天',
+                        : Text('连续拾起 · ${tree.streakDays} 天',
                             style: const TextStyle(
-                                fontSize: 12, color: AppTheme.textSub),
-                          ),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 1,
+                                color: AppTheme.primaryDark)),
+                  ),
+                  const SizedBox(height: 4),
+                  const Center(
+                    child: Text('我的拾光树',
+                        style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.textMain)),
+                  ),
+                  const SizedBox(height: 4),
+                  const Center(
+                    child: Text('每打一次卡，树就长大一点。',
+                        style: TextStyle(
+                            fontSize: 12, color: AppTheme.textSub)),
                   ),
                   const SizedBox(height: 8),
-                  // 树
-                  SizedBox(
-                    height: 320,
-                    child: AnimatedBuilder(
-                      animation: _breath,
-                      builder: (_, __) => CustomPaint(
-                        painter: TreePainter(
-                          level: tree?.level ?? 1,
-                          season: tree?.season ?? 1,
-                          lightPoints: tree?.lightPoints ?? const [],
-                          breath: _breath.value,
-                        ),
+                  // 树画布（原型 garden-canvas：白卡 + 天空/地面分层）
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: AppTheme.cardShadow,
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: SizedBox(
+                      height: 300,
+                      child: Stack(
+                        children: [
+                          // 天空
+                          const Positioned(
+                            left: 0,
+                            right: 0,
+                            top: 0,
+                            height: 180,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Color(0xFFFDF6E8),
+                                    AppTheme.bg,
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          // 地面
+                          const Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            height: 105,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Color(0xFFE8E4D2),
+                                    Color(0xFFD8D4C0),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          AnimatedBuilder(
+                            animation: _breath,
+                            builder: (_, __) => CustomPaint(
+                              size: const Size(double.infinity, 300),
+                              painter: TreePainter(
+                                level: tree?.level ?? 1,
+                                season: tree?.season ?? 1,
+                                lightPoints: tree?.lightPoints ?? const [],
+                                breath: _breath.value,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -103,7 +156,7 @@ class _GardenPageState extends State<GardenPage>
                               fontWeight: FontWeight.w600,
                               color: AppTheme.textMain)),
                       const SizedBox(width: 8),
-                      Text('已点亮 ${garden.ownedCount}/${garden.badges.length}',
+                      Text('${garden.ownedCount} / ${garden.badges.length}',
                           style: const TextStyle(
                               fontSize: 12, color: AppTheme.textSub)),
                     ],
@@ -137,6 +190,12 @@ class _YearProgress extends StatelessWidget {
   final TreeVO tree;
   const _YearProgress({required this.tree});
 
+  int _daysLeft() {
+    final now = DateTime.now();
+    final end = DateTime(now.year + 1, 1, 1);
+    return end.difference(now).inDays;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -152,12 +211,12 @@ class _YearProgress extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('今年的拾光',
-                  style: TextStyle(
+              Text('${DateTime.now().year} 拾光册',
+                  style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.textMain)),
-              Text('${tree.yearCount} / ${tree.yearTarget}',
+              Text('已收集 ${tree.points} 个光点',
                   style: const TextStyle(
                       fontSize: 12, color: AppTheme.textSub)),
             ],
@@ -171,6 +230,18 @@ class _YearProgress extends StatelessWidget {
               backgroundColor: AppTheme.divider,
               color: AppTheme.primary,
             ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('年进度 ${(tree.yearProgress * 100).toStringAsFixed(0)}%',
+                  style: const TextStyle(
+                      fontSize: 12, color: AppTheme.textSub)),
+              Text('距年底还有 ${_daysLeft()} 天',
+                  style: const TextStyle(
+                      fontSize: 12, color: AppTheme.textSub)),
+            ],
           ),
         ],
       ),

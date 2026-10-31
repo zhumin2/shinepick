@@ -128,20 +128,29 @@ class FeedUser {
   final String nickname;
   final String avatarUrl;
 
+  /// 连续打卡天数（同路人卡展示用；feed 树缓存里可能缺省）
+  final int streakDays;
+
   const FeedUser({
     required this.id,
     required this.nickname,
     this.avatarUrl = '',
+    this.streakDays = 0,
   });
 
   factory FeedUser.fromJson(Map<String, dynamic> json) => FeedUser(
         id: (json['id'] as num).toInt(),
         nickname: json['nickname'] as String? ?? '',
         avatarUrl: json['avatar_url'] as String? ?? '',
+        streakDays: (json['streak_days'] as num?)?.toInt() ?? 0,
       );
 
-  Map<String, dynamic> toJson() =>
-      {'id': id, 'nickname': nickname, 'avatar_url': avatarUrl};
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'nickname': nickname,
+        'avatar_url': avatarUrl,
+        'streak_days': streakDays,
+      };
 }
 
 /// Feed 条目（今日微光 / 同品类打卡的陌生人 / 发现页）。

@@ -21,9 +21,10 @@ const (
 
 // FeedUser Feed 条目的作者信息。
 type FeedUser struct {
-	ID        int64  `json:"id"`
-	Nickname  string `json:"nickname"`
-	AvatarURL string `json:"avatar_url"`
+	ID         int64  `json:"id"`
+	Nickname   string `json:"nickname"`
+	AvatarURL  string `json:"avatar_url"`
+	StreakDays int    `json:"streak_days,omitempty"` // 连续打卡天数（同路人卡展示）
 }
 
 // FeedItem 今日微光/同品类条目。
@@ -189,7 +190,13 @@ func (s *FeedService) doingForUser(ctx context.Context, uid int64, today string)
 				continue
 			}
 			seen[c.UserID] = true
-			out = append(out, toFeedItem(c))
+			item := toFeedItem(c)
+			// 连续天数：按用户查去重日期（≤5 人，代价可控）
+			if dates, err := s.repo.DistinctDates(ctx, c.UserID, 400); err == nil {
+				_, streak := computeStreak(dates, time.Now().In(cstZone))
+				item.User.StreakDays = streak
+			}
+			out = append(out, item)
 			if len(out) >= doingN {
 				return out, nil
 			}

@@ -59,7 +59,8 @@ void main() {
         ),
       ),
     ));
-    expect(find.text('pig'), findsOneWidget);
+    expect(find.textContaining('pig · 运动'), findsOneWidget,
+        reason: 'meta 行合并显示昵称/品类/时间');
     expect(find.text('同路人'), findsOneWidget);
     expect(find.textContaining('今天跑了 3 公里'), findsOneWidget);
     await tester.tap(find.text('点亮'));

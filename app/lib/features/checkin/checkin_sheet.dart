@@ -166,18 +166,24 @@ class _CheckinSheetState extends State<CheckinSheet> {
                     color: AppTheme.textMain)),
           ),
           const SizedBox(height: 16),
-          // 品类
+          // 品类（原型 cat-grid：3 列网格，含「自定义」v2 占位）
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
+            child: GridView.count(
+              crossAxisCount: 3,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 2.4,
               children: [
-                for (final c in CheckinCategory.values.where((c) => c != CheckinCategory.custom))
-                  _CategoryChip(
+                for (final c in CheckinCategory.values)
+                  _CategoryTile(
                     category: c,
                     selected: _category == c,
-                    onTap: () => setState(() => _category = c),
+                    onTap: c == CheckinCategory.custom
+                        ? () => Toast.show(context, '自定义品类 v2 开放，敬请期待')
+                        : () => setState(() => _category = c),
                   ),
               ],
             ),
@@ -236,18 +242,21 @@ class _CheckinSheetState extends State<CheckinSheet> {
             ),
           ),
           const SizedBox(height: 16),
-          // 可见范围
+          // 可见范围（原型 vis-opt：选中墨色底白字）
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: SegmentedButton<int>(
-              segments: [
-                for (final v in CheckinVisibility.values)
-                  ButtonSegment(value: v.code, label: Text(v.label)),
+            child: Row(
+              children: [
+                for (final v in CheckinVisibility.values) ...[
+                  if (v != CheckinVisibility.values.first)
+                    const SizedBox(width: 8),
+                  Expanded(child: _VisOption(
+                    label: v.label,
+                    selected: _visibility == v,
+                    onTap: () => setState(() => _visibility = v),
+                  )),
+                ],
               ],
-              selected: {_visibility.code},
-              onSelectionChanged: (s) => setState(
-                  () => _visibility = CheckinVisibility.values
-                      .firstWhere((v) => v.code == s.first)),
             ),
           ),
           const SizedBox(height: 20),
@@ -265,7 +274,7 @@ class _CheckinSheetState extends State<CheckinSheet> {
                         child:
                             CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
-                    : const Text('发布'),
+                    : const Text('拾起今天'),
               ),
             ),
           ),
@@ -275,13 +284,72 @@ class _CheckinSheetState extends State<CheckinSheet> {
   }
 }
 
-class _CategoryChip extends StatelessWidget {
+/// 品类网格项（原型 cat-item：emoji 位置用品类色圆点 + 名）。
+class _CategoryTile extends StatelessWidget {
   final CheckinCategory category;
   final bool selected;
   final VoidCallback onTap;
 
-  const _CategoryChip({
+  const _CategoryTile({
     required this.category,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isCustom = category == CheckinCategory.custom;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? AppTheme.sand : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? AppTheme.primary : AppTheme.divider,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isCustom ? AppTheme.divider : category.color,
+              ),
+              child: isCustom
+                  ? const Icon(Icons.add, size: 14, color: AppTheme.textSub)
+                  : null,
+            ),
+            const SizedBox(height: 3),
+            Text(
+              category.label,
+              style: TextStyle(
+                fontSize: 11,
+                color: selected ? AppTheme.primaryDark : AppTheme.textSub,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 可见范围选项（原型 vis-opt：选中墨色底白字）。
+class _VisOption extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _VisOption({
+    required this.label,
     required this.selected,
     required this.onTap,
   });
@@ -290,22 +358,22 @@ class _CategoryChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(10),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? category.color.withValues(alpha: 0.15) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          color: selected ? AppTheme.textMain : Colors.white,
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: selected ? category.color : AppTheme.divider,
-            width: selected ? 1.5 : 1,
+            color: selected ? AppTheme.textMain : AppTheme.divider,
           ),
         ),
+        alignment: Alignment.center,
         child: Text(
-          category.label,
+          label,
           style: TextStyle(
-            fontSize: 13,
-            color: selected ? category.color : AppTheme.textSub,
+            fontSize: 12,
+            color: selected ? Colors.white : AppTheme.textSub,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
           ),
         ),

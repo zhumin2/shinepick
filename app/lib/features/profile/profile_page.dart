@@ -8,7 +8,9 @@ import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_sheet.dart';
 import '../../shared/widgets/avatar.dart';
 import '../../shared/widgets/toast.dart';
+import '../../shared/models/checkin.dart';
 import '../auth/auth_controller.dart';
+import '../checkin/checkin_controller.dart';
 
 /// 我的页（S2-03）：资料展示 + 编辑 + 头像上传；统计为骨架，S3 起填充。
 class ProfilePage extends StatefulWidget {
@@ -100,18 +102,17 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Column(
           children: [
             const SizedBox(height: 12),
-            // 头像 + 昵称 + 简介
-            Center(
-              child: Column(
-                children: [
-                  Stack(
-                    children: [
-                      Avatar(
-                        url: u?.avatarUrl,
-                        nickname: u?.nickname ?? '',
-                        size: 84,
-                        onTap: _changeAvatar,
-                      ),
+            // 头像（左）+ 昵称/简介（右）——原型 profile-head 横排
+            Row(
+              children: [
+                Stack(
+                  children: [
+                    Avatar(
+                      url: u?.avatarUrl,
+                      nickname: u?.nickname ?? '',
+                      size: 64,
+                      onTap: _changeAvatar,
+                    ),
                       if (_uploading)
                         Positioned.fill(
                           child: CircularProgressIndicator(
@@ -137,29 +138,34 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(u?.nickname ?? '',
-                      style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.textMain)),
-                  if ((u?.bio ?? '').isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(u!.bio,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            fontSize: 13,
-                            height: 1.6,
-                            color: AppTheme.textSub)),
-                  ],
-                  const SizedBox(height: 4),
-                  Text(u?.phoneMasked ?? '',
-                      style: const TextStyle(
-                          fontSize: 12, color: AppTheme.textSub)),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(u?.nickname ?? '',
+                            style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.textMain)),
+                        if ((u?.bio ?? '').isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          Text(u!.bio,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 12, color: AppTheme.textSub)),
+                        ],
+                        const SizedBox(height: 3),
+                        Text(u?.phoneMasked ?? '',
+                            style: const TextStyle(
+                                fontSize: 12, color: AppTheme.textSub)),
+                      ],
+                    ),
+                  ),
                 ],
               ),
-            ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 8),
             // 统计（打卡天数/连续天数来自 /users/me；同路人 S5 上线）
             Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -185,6 +191,11 @@ class _ProfilePageState extends State<ProfilePage> {
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+            // 最近的拾光（原型 list-row：品类色块 + 标题 + 时间 · 品类 · 可见性）
+            const _SectionHeader('最近的拾光'),
+            const SizedBox(height: 10),
+            _buildRecent(),
             const SizedBox(height: 16),
             // 资料明细
             Container(
@@ -242,6 +253,23 @@ class _ProfilePageState extends State<ProfilePage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildRecent() {
+    final items = context.watch<CheckinController>().items.take(3).toList();
+    if (items.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        alignment: Alignment.center,
+        child: const Text('还没有拾光记录',
+            style: TextStyle(fontSize: 12, color: AppTheme.textSub)),
+      );
+    }
+    return Column(
+      children: [
+        for (final c in items) _RecentRow(checkin: c),
+      ],
     );
   }
 
@@ -476,5 +504,113 @@ class _EditFormState extends State<_EditForm> {
         ),
       ],
     );
+  }
+}
+
+
+/// 区块标题（原型 section-title）。
+class _SectionHeader extends StatelessWidget {
+  final String text;
+  const _SectionHeader(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(text,
+          style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textMain)),
+    );
+  }
+}
+
+/// 最近的拾光轻量行（原型 list-row）。
+class _RecentRow extends StatelessWidget {
+  final Checkin checkin;
+  const _RecentRow({required this.checkin});
+
+  @override
+  Widget build(BuildContext context) {
+    final cat = checkin.categoryEnum ?? CheckinCategory.sport;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: AppTheme.cardShadow,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: cat.color.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(_catIcon(cat), size: 16, color: cat.color),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(checkin.content,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.textMain)),
+                const SizedBox(height: 2),
+                Text(_sub(),
+                    style: const TextStyle(
+                        fontSize: 11, color: AppTheme.textSub)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _sub() {
+    final t = checkin.createdAt;
+    String day;
+    if (t == null) {
+      day = checkin.checkinDate;
+    } else {
+      final now = DateTime.now();
+      final diff = DateTime(now.year, now.month, now.day)
+          .difference(DateTime(t.year, t.month, t.day))
+          .inDays;
+      day = diff <= 0 ? '今天' : (diff == 1 ? '昨天' : '$diff 天前');
+    }
+    final vis = switch (checkin.visibility) {
+      1 => '仅自己可见',
+      3 => '小树洞',
+      _ => '同路人可见',
+    };
+    return '$day · ${(checkin.categoryEnum ?? CheckinCategory.sport).label} · $vis';
+  }
+
+  IconData _catIcon(CheckinCategory cat) {
+    switch (cat) {
+      case CheckinCategory.sport:
+        return Icons.directions_run_outlined;
+      case CheckinCategory.read:
+        return Icons.menu_book_outlined;
+      case CheckinCategory.travel:
+        return Icons.flight_takeoff_outlined;
+      case CheckinCategory.social:
+        return Icons.groups_outlined;
+      case CheckinCategory.pet:
+        return Icons.pets_outlined;
+      default:
+        return Icons.auto_awesome_outlined;
+    }
   }
 }
