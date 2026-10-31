@@ -104,6 +104,8 @@ class _HomePageState extends State<HomePage> {
         checkinId: checkinId,
         checkinOwnerId: ownerId,
       );
+      // 留言弹层关闭后刷新（卡片预览需要最新留言）
+      _refreshAll();
       return;
     }
     final type = switch (action) {

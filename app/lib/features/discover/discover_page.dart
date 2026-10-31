@@ -96,6 +96,8 @@ class _DiscoverPageState extends State<DiscoverPage> {
         checkinId: item.checkin.id,
         checkinOwnerId: item.user.id,
       );
+      // 留言弹层关闭后刷新（新留言要出现在卡片预览里）
+      _reload();
       return;
     }
     final type = switch (action) {
