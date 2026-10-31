@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -48,6 +49,7 @@ var (
 // CreateCheckinReq 发布打卡请求。
 type CreateCheckinReq struct {
 	Category    int8            `json:"category"`
+	CustomName  string          `json:"custom_name"` // category=6 必填（1-20 字，过审核）
 	Content     string          `json:"content"`
 	ImageURLs   []string        `json:"image_urls"`
 	VideoURL    string          `json:"video_url"`
@@ -61,6 +63,7 @@ type CheckinVO struct {
 	ID              int64           `json:"id"`
 	UserID          int64           `json:"user_id"`
 	Category        int8            `json:"category"`
+	CustomName      string          `json:"custom_name,omitempty"`
 	Content         string          `json:"content"`
 	ImageURLs       []string        `json:"image_urls"`
 	VideoURL        string          `json:"video_url,omitempty"`
@@ -109,6 +112,14 @@ func (s *CheckinService) Create(ctx context.Context, uid int64, req *CreateCheck
 	if req.Category < 1 || req.Category > 6 {
 		return nil, &ValidationError{msg: "品类不合法"}
 	}
+	customName := strings.TrimSpace(req.CustomName)
+	if req.Category == 6 {
+		if n := len([]rune(customName)); n < 1 || n > 20 {
+			return nil, &ValidationError{msg: "请给自定义品类起个 1-20 字的名字"}
+		}
+	} else {
+		customName = "" // 固定品类忽略自定义名
+	}
 	if req.Visibility < 1 || req.Visibility > 3 {
 		return nil, &ValidationError{msg: "可见范围不合法"}
 	}
@@ -120,8 +131,14 @@ func (s *CheckinService) Create(ctx context.Context, uid int64, req *CreateCheck
 	}
 
 	// 2. 内容审核（mock 关键词 / remote Python 服务；异常放行策略见 audit 包）
+	// 自定义品类名同样过审（产品 §3.2「需审核」）
 	if v := s.aud.Text(ctx, req.Content); !v.Pass {
 		return nil, ErrCheckinReject
+	}
+	if customName != "" {
+		if v := s.aud.Text(ctx, customName); !v.Pass {
+			return nil, ErrCheckinReject
+		}
 	}
 
 	// 3. 幂等优先：client_token 重复提交返回首次结果（弱网重试不该被频控误拦）
@@ -160,6 +177,7 @@ func (s *CheckinService) Create(ctx context.Context, uid int64, req *CreateCheck
 	c := &model.Checkin{
 		UserID:      uid,
 		Category:    req.Category,
+		CustomName:  customName,
 		Content:     req.Content,
 		ImageURLs:   model.JSONRaw(imgJSON),
 		VideoURL:    req.VideoURL,
@@ -289,6 +307,7 @@ func toCheckinVO(c *model.Checkin) *CheckinVO {
 		ID:          c.ID,
 		UserID:      c.UserID,
 		Category:    c.Category,
+		CustomName:  c.CustomName,
 		Content:     c.Content,
 		ImageURLs:   c.ImageURLs.Strings(),
 		VideoURL:    c.VideoURL,

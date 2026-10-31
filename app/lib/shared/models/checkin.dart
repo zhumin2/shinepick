@@ -56,6 +56,9 @@ class Checkin {
   final int id;
   final int userId;
   final int category;
+
+  /// category=6（自定义）时的品类名
+  final String customName;
   final String content;
   final List<String> imageUrls;
   final int visibility;
@@ -79,6 +82,7 @@ class Checkin {
     this.createdAt,
     this.myReactions = const [],
     this.previewComments = const [],
+    this.customName = '',
   });
 
   factory Checkin.fromJson(Map<String, dynamic> json) {
@@ -91,6 +95,7 @@ class Checkin {
               ?.map((e) => e as String)
               .toList() ??
           const [],
+      customName: json['custom_name'] as String? ?? '',
       visibility: (json['visibility'] as num?)?.toInt() ?? 2,
       checkinDate: json['checkin_date'] as String? ?? '',
       createdAt: json['created_at'] != null
@@ -109,11 +114,15 @@ class Checkin {
   }
 
   /// 带互动态/预览留言的新副本（乐观更新用）。
-  Checkin copyWith({List<int>? myReactions, List<CommentVO>? previewComments}) =>
+  Checkin copyWith(
+          {List<int>? myReactions,
+          List<CommentVO>? previewComments,
+          String? customName}) =>
       Checkin(
         id: id,
         userId: userId,
         category: category,
+        customName: customName ?? this.customName,
         content: content,
         imageUrls: imageUrls,
         visibility: visibility,
@@ -138,6 +147,15 @@ class Checkin {
       };
 
   CheckinCategory? get categoryEnum => CheckinCategory.byCode(category);
+
+  /// 展示名：自定义品类显示用户起的名字
+  String get categoryLabel {
+    if (category == CheckinCategory.custom.code &&
+        customName.isNotEmpty) {
+      return customName;
+    }
+    return categoryEnum?.label ?? '自定义';
+  }
 }
 
 /// Feed 条目作者信息。

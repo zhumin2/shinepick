@@ -10,12 +10,16 @@ import '../auth/auth_controller.dart';
 /// 发布打卡请求体。
 class PublishCheckinReq {
   final CheckinCategory category;
+
+  /// category=6（自定义）时的品类名
+  final String customName;
   final String content;
   final List<String> imageUrls;
   final CheckinVisibility visibility;
 
   const PublishCheckinReq({
     required this.category,
+    this.customName = '',
     required this.content,
     this.imageUrls = const [],
     this.visibility = CheckinVisibility.companion,
@@ -105,6 +109,8 @@ class CheckinController extends ChangeNotifier {
         '/checkins',
         data: {
           'category': req.category.code,
+          if (req.category == CheckinCategory.custom)
+            'custom_name': req.customName,
           'content': req.content,
           'image_urls': req.imageUrls,
           'visibility': req.visibility.code,

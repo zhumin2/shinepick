@@ -9,7 +9,8 @@ import (
 type Checkin struct {
 	ID          int64     `gorm:"primaryKey;autoIncrement" json:"id"`
 	UserID      int64     `gorm:"column:user_id;index:idx_user_date,priority:1" json:"-"`
-	Category    int8      `json:"category"` // 1运动 2阅读 3旅行 4社交 5宠物 6自定义
+	Category    int8      `json:"category"`                                                // 1运动 2阅读 3旅行 4社交 5宠物 6自定义
+	CustomName  string    `gorm:"column:custom_name;size:20" json:"custom_name,omitempty"` // category=6 时的自定义名（已审核）
 	Content     string    `gorm:"size:500" json:"content"`
 	ImageURLs   JSONRaw   `gorm:"column:image_urls;type:json" json:"image_urls"` // JSON 数组字符串，如 ["..."]
 	VideoURL    string    `gorm:"column:video_url;size:255" json:"video_url,omitempty"`

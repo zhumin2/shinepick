@@ -47,7 +47,7 @@ class FeedCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '$nickname · ${cat.label} · ${_timeLabel()}',
+                    '$nickname · ${c.categoryLabel} · ${_timeLabel()}',
                     style: const TextStyle(
                         fontSize: 12, color: AppTheme.textSub),
                     maxLines: 1,
