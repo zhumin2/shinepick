@@ -30494,7 +30494,7 @@ case 2:q=new A.atW()
 s=3
 return A.n(q.EL(),$async$No)
 case 3:p=new A.NZ(q)
-o=A.b0c("http://127.0.0.1:8080/api/v1",B.HS,B.l3)
+o=A.b0c("/api/v1",B.HS,B.l3)
 n=new A.Rm(A.b([B.EB],t.i6))
 n.M(n,B.N3)
 m=new A.abc($,n,$,new A.af6(51200),!1)
