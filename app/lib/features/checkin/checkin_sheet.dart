@@ -25,9 +25,11 @@ class CheckinSheet extends StatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) => const Padding(
-        padding: EdgeInsets.only(bottom: 20),
-        child: CheckinSheet(),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+        ),
+        child: const CheckinSheet(),
       ),
     );
     return ok ?? false;
