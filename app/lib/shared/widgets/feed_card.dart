@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../models/checkin.dart';
 import 'avatar.dart';
+import 'image_viewer.dart';
 
 /// 微光流打卡卡片（对齐原型 feed-card）：
 /// 品类渐变封面（无图也有）+ meta 行 + 一句话 + 配图 + 胶囊互动钮 + 留言预览。
@@ -72,8 +73,14 @@ class FeedCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
               child: c.imageUrls.length == 1
-                  ? _FullImage(url: c.imageUrls.first)
-                  : _ImageGrid(urls: c.imageUrls),
+                  ? GestureDetector(
+                      onTap: () => ImageViewerPage.open(context, c.imageUrls),
+                      child: _FullImage(url: c.imageUrls.first),
+                    )
+                  : _ImageGrid(
+                      urls: c.imageUrls,
+                      onImageTap: (i) => ImageViewerPage.open(context, c.imageUrls, initialIndex: i),
+                    ),
             ),
           // 留言预览（我们的增强：作者图钉指定优先）
           if (c.previewComments.isNotEmpty)
@@ -225,7 +232,8 @@ class _CoverGradient extends StatelessWidget {
 /// 多图宫格。
 class _ImageGrid extends StatelessWidget {
   final List<String> urls;
-  const _ImageGrid({required this.urls});
+  final void Function(int index)? onImageTap;
+  const _ImageGrid({required this.urls, this.onImageTap});
 
   @override
   Widget build(BuildContext context) {
@@ -235,19 +243,22 @@ class _ImageGrid extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         itemCount: urls.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (_, i) => ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Image.network(
-            urls[i],
-            width: 76,
-            height: 76,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
+        itemBuilder: (_, i) => GestureDetector(
+          onTap: onImageTap != null ? () => onImageTap!(i) : null,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.network(
+              urls[i],
               width: 76,
               height: 76,
-              color: AppTheme.bg,
-              child: const Icon(Icons.broken_image_outlined,
-                  color: AppTheme.textSub, size: 20),
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                width: 76,
+                height: 76,
+                color: AppTheme.bg,
+                child: const Icon(Icons.broken_image_outlined,
+                    color: AppTheme.textSub, size: 20),
+              ),
             ),
           ),
         ),
