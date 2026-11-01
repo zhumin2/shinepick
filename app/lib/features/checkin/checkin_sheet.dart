@@ -1,8 +1,12 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/error/app_error.dart';
+import '../../core/utils/image_compressor.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/checkin.dart';
 import '../../shared/widgets/toast.dart';
@@ -37,9 +41,9 @@ class _CheckinSheetState extends State<CheckinSheet> {
   final _content = TextEditingController();
   CheckinCategory _category = CheckinCategory.sport;
   CheckinVisibility _visibility = CheckinVisibility.companion;
-  final _uploading = <String>[]; // 本地路径，上传中
+  final _uploading = <String>[]; // 上传中的文件名
   final _imageUrls = <String>[]; // 已上传 URL
-  final _failed = <String>[]; // 上传失败的本地路径
+  final _failed = <_FailedImage>[]; // 上传失败的（可重试）
 
   CheckinController get _checkin => context.read<CheckinController>();
 
@@ -89,30 +93,52 @@ class _CheckinSheetState extends State<CheckinSheet> {
     for (final f in files.take(remain)) {
       final name = f.name;
       setState(() => _uploading.add(name));
-      try {
-        // Web 上 file_picker 只给 bytes（无本地路径），统一按字节上传
-        final bytes = await f.readAsBytes();
-        final url = await _checkin.uploadImage(bytes, name);
-        if (!mounted) return;
-        setState(() {
-          _uploading.remove(name);
-          _imageUrls.add(url);
-        });
-      } on AppError catch (e) {
-        if (!mounted) return;
-        setState(() {
-          _uploading.remove(name);
-          _failed.add(name);
-        });
-        Toast.show(context, e.message);
-      } catch (e) {
-        if (!mounted) return;
-        setState(() {
-          _uploading.remove(name);
-          _failed.add(name);
-        });
-        Toast.show(context, '图片上传失败：$e');
-      }
+      await _uploadOne(name, await f.readAsBytes());
+    }
+  }
+
+  /// 上传单张图片（压缩 → 上传），失败时存入 _failed 供重试。
+  Future<void> _uploadOne(String name, Uint8List rawBytes) async {
+    try {
+      final bytes = await ImageCompressor.compress(rawBytes);
+      // 非 图片格式扩展名 → 统一改 .jpg（服务端白名单校验）
+      final dot = name.lastIndexOf('.');
+      final ext = dot >= 0 ? name.substring(dot).toLowerCase() : '.jpg';
+      final serverExt = ['.jpg', '.jpeg', '.png', '.webp', '.gif'].contains(ext)
+          ? (ext == '.jpeg' ? '.jpg' : ext)
+          : '.jpg';
+      final serverName = name.replaceAll(RegExp(r'\.[^.]+$'), '') + serverExt;
+      final url = await _checkin.uploadImage(bytes, serverName);
+      if (!mounted) return;
+      setState(() {
+        _uploading.remove(name);
+        _imageUrls.add(url);
+      });
+    } on AppError catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _uploading.remove(name);
+        _failed.add(_FailedImage(name: name, bytes: rawBytes));
+      });
+      Toast.show(context, e.message);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _uploading.remove(name);
+        _failed.add(_FailedImage(name: name, bytes: rawBytes));
+      });
+      Toast.show(context, '图片上传失败：$e');
+    }
+  }
+
+  /// 重试所有失败的图片上传。
+  Future<void> _retryFailed() async {
+    if (_failed.isEmpty) return;
+    final list = List<_FailedImage>.from(_failed);
+    setState(() => _failed.clear());
+    for (final f in list) {
+      setState(() => _uploading.add(f.name));
+      await _uploadOne(f.name, f.bytes);
     }
   }
 
@@ -224,11 +250,11 @@ class _CheckinSheetState extends State<CheckinSheet> {
                       ),
                     ),
                   ),
-                for (final p in _failed)
+                for (final _ in _failed)
                   _Thumb(
-                    child: const Icon(Icons.error_outline,
-                        color: AppTheme.textSub, size: 20),
-                    onRemove: () => setState(() => _failed.remove(p)),
+                    child: const Icon(Icons.refresh,
+                        color: AppTheme.primary, size: 20),
+                    onTap: () => _retryFailed(),
                   ),
                 if (_imageUrls.length + _uploading.length + _failed.length < 9)
                   _Thumb(
@@ -445,4 +471,12 @@ class _Thumb extends StatelessWidget {
       ],
     );
   }
+}
+
+
+/// 上传失败的图片（保存字节供重试）。
+class _FailedImage {
+  final String name;
+  final Uint8List bytes;
+  const _FailedImage({required this.name, required this.bytes});
 }
