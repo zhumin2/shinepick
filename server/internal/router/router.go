@@ -33,11 +33,12 @@ func Register(ctx context.Context, e *gin.Engine, db *gorm.DB, rdb *redis.Client
 	jm := jwt.NewManager(cfg.JWTSecret)
 	repo := repository.NewUserRepo(db)
 	authSvc := service.NewAuthService(db, rdb, jm, sms.NewSender(sms.SMSConfig{
-		Type:            cfg.SMSType,
-		AccessKeyID:     cfg.SMSAccessKeyID,
-		AccessKeySecret: cfg.SMSAccessKeySecret,
-		SignName:        cfg.SMSSignName,
-		TemplateCode:    cfg.SMSTemplateCode,
+		Type:       cfg.SMSType,
+		SecretID:   cfg.SMSSecretID,
+		SecretKey:  cfg.SMSSecretKey,
+		AppID:      cfg.SMSAppID,
+		SignName:   cfg.SMSSignName,
+		TemplateID: cfg.SMSTemplateID,
 	}), repo)
 	auth.NewHandler(authSvc).Register(api)
 

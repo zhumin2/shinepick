@@ -4,44 +4,46 @@ import "os"
 
 // Config 服务配置，全部来自环境变量，密钥不入仓库。
 type Config struct {
-	AppEnv             string // dev / staging / prod
-	Port               string
-	DBDSN              string
-	RedisAddr          string
-	RedisPassword      string
-	JWTSecret          string
-	RefreshTTL         string // 如 720h
-	SMSType            string // mock / aliyun
-	SMSAccessKeyID     string
-	SMSAccessKeySecret string
-	SMSSignName        string
-	SMSTemplateCode    string
-	UploadDir          string // 上传文件根目录（dev 本地驱动）
-	PublicBaseURL      string // 对外基础 URL（拼接静态资源链接）
-	AuditType          string // mock / remote（remote=独立 Python 审核服务）
-	AuditRemoteURL     string
-	AdminToken         string // 运营接口令牌（X-Admin-Token 头；生产务必改掉默认值）
+	AppEnv         string // dev / staging / prod
+	Port           string
+	DBDSN          string
+	RedisAddr      string
+	RedisPassword  string
+	JWTSecret      string
+	RefreshTTL     string // 如 720h
+	SMSType        string // mock / tencent
+	SMSSecretID    string
+	SMSSecretKey   string
+	SMSAppID       string
+	SMSSignName    string
+	SMSTemplateID  string
+	UploadDir      string // 上传文件根目录（dev 本地驱动）
+	PublicBaseURL  string // 对外基础 URL（拼接静态资源链接）
+	AuditType      string // mock / remote（remote=独立 Python 审核服务）
+	AuditRemoteURL string
+	AdminToken     string // 运营接口令牌（X-Admin-Token 头；生产务必改掉默认值）
 }
 
 func Load() *Config {
 	return &Config{
-		AppEnv:             getenv("APP_ENV", "dev"),
-		Port:               getenv("PORT", "8080"),
-		DBDSN:              getenv("DB_DSN", "root:123456@tcp(127.0.0.1:3306)/shinepick?charset=utf8mb4&parseTime=True&loc=Local"),
-		RedisAddr:          getenv("REDIS_ADDR", "127.0.0.1:6379"),
-		RedisPassword:      getenv("REDIS_PASSWORD", ""),
-		JWTSecret:          getenv("JWT_SECRET", "dev-secret-change-me"),
-		RefreshTTL:         getenv("REFRESH_TTL", "720h"),
-		SMSType:            getenv("SMS_TYPE", "mock"),
-		SMSAccessKeyID:     getenv("SMS_ACCESS_KEY_ID", ""),
-		SMSAccessKeySecret: getenv("SMS_ACCESS_KEY_SECRET", ""),
-		SMSSignName:        getenv("SMS_SIGN_NAME", ""),
-		SMSTemplateCode:    getenv("SMS_TEMPLATE_CODE", ""),
-		UploadDir:          getenv("UPLOAD_DIR", "./uploads"),
-		PublicBaseURL:      getenv("PUBLIC_BASE_URL", "http://127.0.0.1:8080"),
-		AuditType:          getenv("AUDIT_TYPE", "mock"),
-		AuditRemoteURL:     getenv("AUDIT_REMOTE_URL", ""),
-		AdminToken:         getenv("ADMIN_TOKEN", "dev-admin-token"),
+		AppEnv:         getenv("APP_ENV", "dev"),
+		Port:           getenv("PORT", "8080"),
+		DBDSN:          getenv("DB_DSN", "root:123456@tcp(127.0.0.1:3306)/shinepick?charset=utf8mb4&parseTime=True&loc=Local"),
+		RedisAddr:      getenv("REDIS_ADDR", "127.0.0.1:6379"),
+		RedisPassword:  getenv("REDIS_PASSWORD", ""),
+		JWTSecret:      getenv("JWT_SECRET", "dev-secret-change-me"),
+		RefreshTTL:     getenv("REFRESH_TTL", "720h"),
+		SMSType:        getenv("SMS_TYPE", "mock"),
+		SMSSecretID:    getenv("SMS_SECRET_ID", ""),
+		SMSSecretKey:   getenv("SMS_SECRET_KEY", ""),
+		SMSAppID:       getenv("SMS_APP_ID", ""),
+		SMSSignName:    getenv("SMS_SIGN_NAME", ""),
+		SMSTemplateID:  getenv("SMS_TEMPLATE_ID", ""),
+		UploadDir:      getenv("UPLOAD_DIR", "./uploads"),
+		PublicBaseURL:  getenv("PUBLIC_BASE_URL", "http://127.0.0.1:8080"),
+		AuditType:      getenv("AUDIT_TYPE", "mock"),
+		AuditRemoteURL: getenv("AUDIT_REMOTE_URL", ""),
+		AdminToken:     getenv("ADMIN_TOKEN", "dev-admin-token"),
 	}
 }
 

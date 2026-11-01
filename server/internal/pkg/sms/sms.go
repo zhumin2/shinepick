@@ -1,53 +1,54 @@
 package sms
 
 import (
+	"bytes"
 	"crypto/hmac"
-	"crypto/sha1"
-	"encoding/base64"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"net/url"
-	"sort"
-	"strings"
 	"time"
 )
 
-// Sender 短信发送。mock = 打印日志；aliyun = 阿里云短信 Dysmsapi API。
+// Sender 短信发送。mock = 打印日志；tencent = 腾讯云短信 SMS API。
 type Sender struct {
-	smsType         string
-	accessKeyID     string
-	accessKeySecret string
-	signName        string
-	templateCode    string
+	smsType    string
+	secretID   string
+	secretKey  string
+	appID      string
+	signName   string
+	templateID string
 }
 
 // SMSConfig 短信服务配置。
 type SMSConfig struct {
-	Type            string // mock / aliyun
-	AccessKeyID     string
-	AccessKeySecret string
-	SignName        string
-	TemplateCode    string
+	Type       string // mock / tencent
+	SecretID   string // 腾讯云 API SecretId
+	SecretKey  string // 腾讯云 API SecretKey
+	AppID      string // 短信 SmsSdkAppId
+	SignName   string // 短信签名名称
+	TemplateID string // 短信模板 ID
 }
 
 func NewSender(cfg SMSConfig) *Sender {
 	return &Sender{
-		smsType:         cfg.Type,
-		accessKeyID:     cfg.AccessKeyID,
-		accessKeySecret: cfg.AccessKeySecret,
-		signName:        cfg.SignName,
-		templateCode:    cfg.TemplateCode,
+		smsType:    cfg.Type,
+		secretID:   cfg.SecretID,
+		secretKey:  cfg.SecretKey,
+		appID:      cfg.AppID,
+		signName:   cfg.SignName,
+		templateID: cfg.TemplateID,
 	}
 }
 
 // IsMock 是否 mock 通道（dev 固定验证码，见 S1 计划 §3.1）。
 func (s *Sender) IsMock() bool {
-	return s.smsType != "aliyun" ||
-		s.accessKeyID == "" || s.accessKeySecret == "" ||
-		s.signName == "" || s.templateCode == ""
+	return s.smsType != "tencent" ||
+		s.secretID == "" || s.secretKey == "" ||
+		s.appID == "" || s.signName == "" || s.templateID == ""
 }
 
 // Send 发送验证码短信。
@@ -57,116 +58,115 @@ func (s *Sender) Send(phone, code string) error {
 		return nil
 	}
 	switch s.smsType {
-	case "aliyun":
-		return s.sendAliyun(phone, code)
+	case "tencent":
+		return s.sendTencent(phone, code)
 	default:
-		log.Printf("[sms:unknown-type] phone=%s code=%s type=%s", phone, code, s.smsType)
+		log.Printf("[sms:unknown] phone=%s type=%s", phone, s.smsType)
 		return nil
 	}
 }
 
-// ---- 阿里云短信 Dysmsapi（RPC + HMAC-SHA1 签名，无外部 SDK 依赖）----
+// ---- 腾讯云短信 API（TC3-HMAC-SHA256 签名，无外部 SDK 依赖）----
 
-const aliyunSMSAPI = "https://dysmsapi.aliyuncs.com/"
+const (
+	tencentSMSAPI     = "https://sms.tencentcloudapi.com"
+	tencentSMSService = "sms"
+	tencentSMSVersion = "2021-01-11"
+)
 
-func (s *Sender) sendAliyun(phone, code string) error {
-	if s.accessKeyID == "" || s.accessKeySecret == "" || s.signName == "" || s.templateCode == "" {
-		log.Printf("[sms:aliyun] 凭据缺失，回退 mock。请配置 SMS_ACCESS_KEY_ID / SMS_ACCESS_KEY_SECRET / SMS_SIGN_NAME / SMS_TEMPLATE_CODE")
-		log.Printf("[sms:mock-fallback] phone=%s code=%s", phone, code)
-		return nil
-	}
-
-	templateParam, _ := json.Marshal(map[string]string{"code": code})
-
-	params := map[string]string{
-		"AccessKeyId":      s.accessKeyID,
-		"Action":           "SendSms",
-		"Format":           "JSON",
-		"PhoneNumbers":     phone,
-		"RegionId":         "cn-hangzhou",
+func (s *Sender) sendTencent(phone, code string) error {
+	reqBody, _ := json.Marshal(map[string]interface{}{
+		"PhoneNumberSet":   []string{"+86" + phone},
+		"SmsSdkAppId":      s.appID,
 		"SignName":         s.signName,
-		"SignatureMethod":  "HMAC-SHA1",
-		"SignatureNonce":   fmt.Sprintf("%d", time.Now().UnixNano()),
-		"SignatureVersion": "1.0",
-		"TemplateCode":     s.templateCode,
-		"TemplateParam":    string(templateParam),
-		"Timestamp":        time.Now().UTC().Format("2006-01-02T15:04:05Z"),
-		"Version":          "2017-05-25",
-	}
+		"TemplateId":       s.templateID,
+		"TemplateParamSet": []string{code},
+	})
 
-	// 签名
-	params["Signature"] = s.signRPC(params, s.accessKeySecret)
+	timestamp := time.Now().Unix()
+	date := time.Unix(timestamp, 0).UTC().Format("2006-01-02")
 
-	// 构建请求 URL
-	values := url.Values{}
-	for k, v := range params {
-		values.Set(k, v)
-	}
-	apiURL := aliyunSMSAPI + "?" + values.Encode()
+	signature := s.signTC3(reqBody, timestamp, date)
 
-	resp, err := http.Get(apiURL)
+	req, err := http.NewRequest("POST", tencentSMSAPI, bytes.NewReader(reqBody))
 	if err != nil {
-		return fmt.Errorf("aliyun sms request: %w", err)
+		return fmt.Errorf("tencent sms new request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	req.Header.Set("Host", "sms.tencentcloudapi.com")
+	req.Header.Set("X-TC-Action", "SendSms")
+	req.Header.Set("X-TC-Version", tencentSMSVersion)
+	req.Header.Set("X-TC-Timestamp", fmt.Sprintf("%d", timestamp))
+	req.Header.Set("X-TC-Region", "")
+	req.Header.Set("Authorization",
+		fmt.Sprintf("TC3-HMAC-SHA256 Credential=%s/%s/%s/tc3_request, SignedHeaders=content-type;host, Signature=%s",
+			s.secretID, date, tencentSMSService, signature))
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("tencent sms request: %w", err)
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	result, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("aliyun sms read body: %w", err)
+		return fmt.Errorf("tencent sms read body: %w", err)
 	}
 
-	var result struct {
-		Code      string `json:"Code"`
-		Message   string `json:"Message"`
-		RequestID string `json:"RequestId"`
+	var out struct {
+		Response struct {
+			SendStatusSet []struct {
+				Code    string `json:"Code"`
+				Message string `json:"Message"`
+			} `json:"SendStatusSet"`
+			Error *struct {
+				Code    string `json:"Code"`
+				Message string `json:"Message"`
+			} `json:"Error"`
+		} `json:"Response"`
 	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("aliyun sms parse response: %w", err)
+	if err := json.Unmarshal(result, &out); err != nil {
+		return fmt.Errorf("tencent sms parse: %w", err)
 	}
-	if result.Code != "OK" {
-		return fmt.Errorf("aliyun sms error: code=%s message=%s", result.Code, result.Message)
+	if out.Response.Error != nil {
+		return fmt.Errorf("tencent sms error: %s %s", out.Response.Error.Code, out.Response.Error.Message)
+	}
+	for _, st := range out.Response.SendStatusSet {
+		if st.Code != "Ok" {
+			return fmt.Errorf("tencent sms send status: %s %s", st.Code, st.Message)
+		}
 	}
 
-	log.Printf("[sms:aliyun] phone=%s sent OK", phone)
+	log.Printf("[sms:tencent] phone=%s sent OK", phone)
 	return nil
 }
 
-// signRPC 阿里云 RPC 签名（HMAC-SHA1 + Base64）。
-func (s *Sender) signRPC(params map[string]string, secret string) string {
-	// 1. 按 key 排序
-	keys := make([]string, 0, len(params))
-	for k := range params {
-		if k == "Signature" {
-			continue
-		}
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
+// signTC3 腾讯云 API 3.0 签名（TC3-HMAC-SHA256）。
+func (s *Sender) signTC3(body []byte, timestamp int64, date string) string {
+	hashedBody := sha256Hex(body)
+	canonicalRequest := "POST\n/\n\ncontent-type:application/json; charset=utf-8\nhost:sms.tencentcloudapi.com\n\ncontent-type;host\n" + hashedBody
 
-	// 2. 构建 canonical query string（特殊 URL 编码）
-	pairs := make([]string, 0, len(keys))
-	for _, k := range keys {
-		pairs = append(pairs, aliyunEncode(k)+"="+aliyunEncode(params[k]))
-	}
-	queryString := strings.Join(pairs, "&")
+	hashedCanonical := sha256Hex([]byte(canonicalRequest))
+	stringToSign := fmt.Sprintf("TC3-HMAC-SHA256\n%d\n%s\n%s/tc3_request\n%s",
+		timestamp, date, tencentSMSService, hashedCanonical)
 
-	// 3. string to sign: GET&%2F&<encoded query>
-	stringToSign := "GET&" + aliyunEncode("/") + "&" + aliyunEncode(queryString)
+	kDate := hmacSHA256([]byte("TC3"+s.secretKey), date)
+	kService := hmacSHA256(kDate, tencentSMSService)
+	kSigning := hmacSHA256(kService, "tc3_request")
 
-	// 4. HMAC-SHA1
-	mac := hmac.New(sha1.New, []byte(secret+"&"))
-	mac.Write([]byte(stringToSign))
-	return base64.StdEncoding.EncodeToString(mac.Sum(nil))
+	return hex.EncodeToString(hmacSHA256(kSigning, stringToSign))
 }
 
-// aliyunEncode 阿里云特殊 URL 编码（RFC 3986：空格→%20，*→%2A，~不编码）。
-func aliyunEncode(s string) string {
-	encoded := url.QueryEscape(s)
-	// QueryEscape 用 + 代替空格，阿里云要求 %20
-	encoded = strings.ReplaceAll(encoded, "+", "%20")
-	// QueryEscape 不编码 *，阿里云要求 %2A
-	encoded = strings.ReplaceAll(encoded, "*", "%2A")
-	// QueryEscape 编码 ~，阿里云要求不编码
-	encoded = strings.ReplaceAll(encoded, "%7E", "~")
-	return encoded
+// ---- 工具 ----
+
+func sha256Hex(b []byte) string {
+	h := sha256.New()
+	h.Write(b)
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+func hmacSHA256(key []byte, data string) []byte {
+	h := hmac.New(sha256.New, key)
+	h.Write([]byte(data))
+	return h.Sum(nil)
 }
