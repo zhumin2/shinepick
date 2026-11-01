@@ -145,13 +145,14 @@ class ApiClient {
   }
 
   /// multipart 字节上传（跨平台：Web 上 file_picker 只给 bytes，没有本地路径）。
-  /// 上传超时 30s（大图+移动网络），独立于全局 15s。
+  /// 上传超时 60s（大图+移动网络），支持进度回调。
   Future<T> uploadBytes<T>(
     String path,
     Uint8List bytes, {
     String filename = 'upload.jpg',
     String field = 'file',
     T Function(dynamic)? parser,
+    void Function(int sent, int total)? onSendProgress,
   }) async {
     final form = FormData.fromMap({
       field: MultipartFile.fromBytes(bytes, filename: filename),
@@ -159,9 +160,10 @@ class ApiClient {
     final resp = await dio.post<Map<String, dynamic>>(
       path,
       data: form,
+      onSendProgress: onSendProgress,
       options: Options(
-        sendTimeout: const Duration(seconds: 30),
-        receiveTimeout: const Duration(seconds: 30),
+        sendTimeout: const Duration(seconds: 60),
+        receiveTimeout: const Duration(seconds: 60),
       ),
     );
     return _unwrap<T>(resp, parser);

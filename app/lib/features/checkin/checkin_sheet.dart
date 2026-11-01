@@ -46,6 +46,7 @@ class _CheckinSheetState extends State<CheckinSheet> {
   final _uploading = <String>[]; // 上传中的文件名
   final _imageUrls = <String>[]; // 已上传 URL
   final _failed = <_FailedImage>[]; // 上传失败的（可重试）
+  final _progress = <String, double>{}; // 上传进度 0.0 ~ 1.0
 
   CheckinController get _checkin => context.read<CheckinController>();
 
@@ -99,27 +100,50 @@ class _CheckinSheetState extends State<CheckinSheet> {
     }
   }
 
-  /// 上传单张图片（压缩 → 上传），失败时存入 _failed 供重试。
+  /// 上传单张图片：压缩 → 带进度上传 → 失败自动重试一次 → 存入 _failed 供手动重试。
   Future<void> _uploadOne(String name, Uint8List rawBytes) async {
+    await _doUpload(name, rawBytes);
+    // 自动重试一次（网络抖动场景）
+    if (_failed.any((f) => f.name == name)) {
+      await Future.delayed(const Duration(seconds: 2));
+      if (!mounted) return;
+      final failedItem = _failed.firstWhere(
+        (f) => f.name == name,
+        orElse: () => _FailedImage(name: name, bytes: rawBytes),
+      );
+      setState(() {
+        _failed.removeWhere((f) => f.name == name);
+        _uploading.add(name);
+      });
+      await _doUpload(name, failedItem.bytes);
+    }
+  }
+
+  Future<void> _doUpload(String name, Uint8List rawBytes) async {
     try {
-      final bytes = await ImageCompressor.compress(rawBytes);
-      // 非 图片格式扩展名 → 统一改 .jpg（服务端白名单校验）
+      final result = await ImageCompressor.compress(rawBytes);
       final dot = name.lastIndexOf('.');
-      final ext = dot >= 0 ? name.substring(dot).toLowerCase() : '.jpg';
-      final serverExt = ['.jpg', '.jpeg', '.png', '.webp', '.gif'].contains(ext)
-          ? (ext == '.jpeg' ? '.jpg' : ext)
-          : '.jpg';
-      final serverName = name.replaceAll(RegExp(r'\.[^.]+$'), '') + serverExt;
-      final url = await _checkin.uploadImage(bytes, serverName);
+      final serverName = '${dot >= 0 ? name.substring(0, dot) : name}.jpg';
+      final url = await _checkin.uploadImage(
+        result.bytes,
+        serverName,
+        onProgress: (sent, total) {
+          if (total > 0 && mounted) {
+            setState(() => _progress[name] = sent / total);
+          }
+        },
+      );
       if (!mounted) return;
       setState(() {
         _uploading.remove(name);
+        _progress.remove(name);
         _imageUrls.add(url);
       });
     } on AppError catch (e) {
       if (!mounted) return;
       setState(() {
         _uploading.remove(name);
+        _progress.remove(name);
         _failed.add(_FailedImage(name: name, bytes: rawBytes));
       });
       Toast.show(context, e.message);
@@ -127,6 +151,7 @@ class _CheckinSheetState extends State<CheckinSheet> {
       if (!mounted) return;
       setState(() {
         _uploading.remove(name);
+        _progress.remove(name);
         _failed.add(_FailedImage(name: name, bytes: rawBytes));
       });
       Toast.show(context, '图片上传失败：$e');
@@ -242,13 +267,30 @@ class _CheckinSheetState extends State<CheckinSheet> {
                     child: Image.network(url, fit: BoxFit.cover),
                     onRemove: () => setState(() => _imageUrls.remove(url)),
                   ),
-                for (final _ in _uploading)
-                  const _Thumb(
+                for (final name in _uploading)
+                  _Thumb(
                     child: Center(
-                      child: SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              value: _progress[name],
+                              color: AppTheme.primary,
+                            ),
+                          ),
+                          if (_progress[name] != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                '${(_progress[name]! * 100).toInt()}%',
+                                style: const TextStyle(fontSize: 8, color: AppTheme.textSub),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ),

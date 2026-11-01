@@ -125,13 +125,19 @@ class CheckinController extends ChangeNotifier {
 
   /// 上传单张配图，返回可访问 URL（POST /uploads/images）。
   /// 传字节而非路径：Web 上 file_picker 只提供 bytes（没有本地路径）。
-  Future<String> uploadImage(Uint8List bytes, String filename) async {
+  /// [onProgress] 上传进度回调（已发送字节 / 总字节）。
+  Future<String> uploadImage(
+    Uint8List bytes,
+    String filename, {
+    void Function(int sent, int total)? onProgress,
+  }) async {
     final data = await auth.api.uploadBytes<Map<String, dynamic>>(
       '/uploads/images',
       bytes,
       filename: filename,
       field: 'files',
       parser: (d) => Map<String, dynamic>.from(d as Map),
+      onSendProgress: onProgress,
     );
     final urls = data['urls'] as List<dynamic>? ?? const [];
     if (urls.isEmpty) throw AppError.internal();
