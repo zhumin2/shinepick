@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../core/error/app_error.dart';
 import '../../core/network/api_client.dart';
+import '../../core/utils/image_compressor.dart';
 import '../../shared/models/user.dart';
 import '../../shared/storage/token_store.dart';
 
@@ -106,11 +107,12 @@ class AuthController extends ChangeNotifier {
   }
 
   /// 上传头像（POST /users/me/avatar），成功后拉取最新资料回显。
-  /// 传字节而非路径：Web 上 file_picker 只提供 bytes。
+  /// 上传前压缩（头像最大显示 84px，默认压缩级别绰绰有余）。
   Future<void> uploadAvatar(Uint8List bytes, String filename) async {
+    final result = await ImageCompressor.compress(bytes);
     await _api.uploadBytes<Map<String, dynamic>>(
       '/users/me/avatar',
-      bytes,
+      result.bytes,
       filename: filename,
     );
     await refreshProfile();
