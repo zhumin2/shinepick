@@ -10,12 +10,16 @@ import '../auth/auth_controller.dart';
 /// 发布打卡请求体。
 class PublishCheckinReq {
   final CheckinCategory category;
+
+  /// 情绪标签（emoji 列表，最多 3 个，存 extra.moods）
+  final List<String> moods;
   final String content;
   final List<String> imageUrls;
   final CheckinVisibility visibility;
 
   const PublishCheckinReq({
     required this.category,
+    this.moods = const [],
     required this.content,
     this.imageUrls = const [],
     this.visibility = CheckinVisibility.companion,
@@ -105,6 +109,8 @@ class CheckinController extends ChangeNotifier {
         '/checkins',
         data: {
           'category': req.category.code,
+          if (req.moods.isNotEmpty)
+            'extra': {'moods': req.moods},
           'content': req.content,
           'image_urls': req.imageUrls,
           'visibility': req.visibility.code,

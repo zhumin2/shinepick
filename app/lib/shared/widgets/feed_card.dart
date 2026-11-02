@@ -68,6 +68,27 @@ class FeedCard extends StatelessWidget {
                 style: const TextStyle(
                     fontSize: 14, height: 1.55, color: AppTheme.textMain)),
           ),
+          // 情绪标签（内容下方，小号展示）
+          if (c.moods.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+              child: Wrap(
+                spacing: 6,
+                children: [
+                  for (final m in c.moods)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppTheme.sand.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(m,
+                          style: const TextStyle(fontSize: 12)),
+                    ),
+                ],
+              ),
+            ),
           // 配图
           if (c.imageUrls.isNotEmpty)
             Padding(

@@ -47,8 +47,21 @@ class _CheckinSheetState extends State<CheckinSheet> {
   final _imageUrls = <String>[]; // 已上传 URL
   final _failed = <_FailedImage>[]; // 上传失败的（可重试）
   final _progress = <String, double>{}; // 上传进度 0.0 ~ 1.0
+  final _moods = <String>[]; // 选中的情绪标签（最多 3 个）
 
   CheckinController get _checkin => context.read<CheckinController>();
+
+  /// 情绪标签集（产品调性：温和、正向、不评判）
+  static const _moodOptions = [
+    ('😊', '开心'),
+    ('💪', '元气'),
+    ('😌', '放松'),
+    ('🥰', '幸福'),
+    ('😄', '畅快'),
+    ('🤗', '温暖'),
+    ('😮‍💨', '舒了一口气'),
+    ('🫶', '被治愈'),
+  ];
 
   static const _hints = {
     CheckinCategory.sport: '今天跑了 3 公里，风很舒服',
@@ -178,6 +191,7 @@ class _CheckinSheetState extends State<CheckinSheet> {
     try {
       await _checkin.publish(PublishCheckinReq(
         category: _category,
+        moods: List.unmodifiable(_moods),
         content: text,
         imageUrls: List.unmodifiable(_imageUrls),
         visibility: _visibility,
@@ -252,6 +266,31 @@ class _CheckinSheetState extends State<CheckinSheet> {
                 hintText: '今天______（如：${_hints[_category]}）',
                 counterText: '',
               ),
+            ),
+          ),
+          // 情绪标签（多选，最多 3 个）
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final (emoji, label) in _moodOptions)
+                  _MoodChip(
+                    emoji: emoji,
+                    label: label,
+                    selected: _moods.contains(emoji),
+                    onTap: () => setState(() {
+                      if (_moods.contains(emoji)) {
+                        _moods.remove(emoji);
+                      } else if (_moods.length < 3) {
+                        _moods.add(emoji);
+                      } else {
+                        Toast.show(context, '最多选 3 个情绪');
+                      }
+                    }),
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: 12),
@@ -523,4 +562,53 @@ class _FailedImage {
   final String name;
   final Uint8List bytes;
   const _FailedImage({required this.name, required this.bytes});
+}
+
+
+/// 情绪标签 chip（选中态暖沙底 + 琥珀描边）。
+class _MoodChip extends StatelessWidget {
+  final String emoji;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _MoodChip({
+    required this.emoji,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? AppTheme.sand : Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selected ? AppTheme.primary : AppTheme.divider,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 14)),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: selected ? AppTheme.primaryDark : AppTheme.textSub,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

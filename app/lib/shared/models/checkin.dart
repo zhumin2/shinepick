@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 /// 友好时间标签（打卡/留言/通知共用）：
@@ -71,6 +73,9 @@ class Checkin {
   /// 卡片展示的留言（最多 2 条；作者指定优先，不暴露总数）
   final List<CommentVO> previewComments;
 
+  /// 情绪标签（emoji 列表，如 ["😊","💪"]；存于 extra.moods）
+  final List<String> moods;
+
   const Checkin({
     required this.id,
     required this.userId,
@@ -83,6 +88,7 @@ class Checkin {
     this.myReactions = const [],
     this.previewComments = const [],
     this.customName = '',
+    this.moods = const [],
   });
 
   factory Checkin.fromJson(Map<String, dynamic> json) {
@@ -110,14 +116,37 @@ class Checkin {
                   CommentVO.fromJson(Map<String, dynamic>.from(e as Map)))
               .toList() ??
           const [],
+      moods: _parseMoods(json['extra']),
     );
+  }
+
+  /// 从 extra 解析 moods（后端透传的可能是 Map 或 JSON 字符串）。
+  static List<String> _parseMoods(dynamic extra) {
+    if (extra == null) return const [];
+    try {
+      final Map<dynamic, dynamic> m = extra is Map
+          ? extra
+          : (extra is String && extra.isNotEmpty
+              ? Map.from(_jsonDecode(extra) as Map)
+              : const {});
+      final raw = m['moods'] as List<dynamic>?;
+      return raw?.map((e) => e.toString()).toList() ?? const [];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  static dynamic _jsonDecode(String s) {
+    // ignore: avoid_dynamic_calls
+    return const JsonDecoder().convert(s);
   }
 
   /// 带互动态/预览留言的新副本（乐观更新用）。
   Checkin copyWith(
           {List<int>? myReactions,
           List<CommentVO>? previewComments,
-          String? customName}) =>
+          String? customName,
+          List<String>? moods}) =>
       Checkin(
         id: id,
         userId: userId,
@@ -130,6 +159,7 @@ class Checkin {
         createdAt: createdAt,
         myReactions: myReactions ?? this.myReactions,
         previewComments: previewComments ?? this.previewComments,
+        moods: moods ?? this.moods,
       );
 
   bool hasReaction(int type) => myReactions.contains(type);
@@ -144,6 +174,7 @@ class Checkin {
         'checkin_date': checkinDate,
         'created_at': createdAt?.toIso8601String(),
         'my_reactions': myReactions,
+        if (moods.isNotEmpty) 'extra': {'moods': moods},
       };
 
   CheckinCategory? get categoryEnum => CheckinCategory.byCode(category);
