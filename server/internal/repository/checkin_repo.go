@@ -88,6 +88,15 @@ func (r *CheckinRepo) TreeByUser(ctx context.Context, uid int64) (*model.TreePro
 	return &t, true, nil
 }
 
+// CountPublicByUser 用户同路人可见打卡次数（他人主页统计用）。
+func (r *CheckinRepo) CountPublicByUser(ctx context.Context, uid int64) (int64, error) {
+	var n int64
+	err := r.db.WithContext(ctx).Model(&model.Checkin{}).
+		Where("user_id = ? AND status = 0 AND visibility = 2", uid).
+		Count(&n).Error
+	return n, err
+}
+
 // CountByUser 用户累计有效打卡次数（每次打卡计数，不去重日期）。
 func (r *CheckinRepo) CountByUser(ctx context.Context, uid int64) (int64, error) {
 	var n int64

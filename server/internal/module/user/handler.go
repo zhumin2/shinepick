@@ -2,6 +2,7 @@ package user
 
 import (
 	"errors"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -23,6 +24,26 @@ func (h *Handler) Register(r *gin.RouterGroup) {
 	g.GET("/me", h.Profile)
 	g.PATCH("/me", h.UpdateProfile)
 	g.POST("/me/avatar", h.UploadAvatar)
+	g.GET("/:id", h.OtherProfile)
+}
+
+// OtherProfile GET /users/:id —— 他人公开主页（无手机号/未成年标记）。
+func (h *Handler) OtherProfile(c *gin.Context) {
+	targetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || targetID <= 0 {
+		httpx.FailMsg(c, code.ErrBadRequest, "用户 id 不合法")
+		return
+	}
+	vo, notFound, err := h.svc.OtherProfile(c, c.GetInt64("uid"), targetID)
+	if err != nil {
+		h.render(c, vo, err)
+		return
+	}
+	if notFound {
+		httpx.Fail(c, code.ErrNotFound)
+		return
+	}
+	httpx.OK(c, vo)
 }
 
 // Profile GET /users/me —— 我的资料（含统计骨架）。

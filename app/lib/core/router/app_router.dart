@@ -7,6 +7,7 @@ import '../../features/settings/settings_page.dart';
 import '../../features/shell/shell_page.dart';
 import '../../features/social/notifications_page.dart';
 import '../../features/profile/profile_page.dart';
+import '../../features/profile/user_profile_page.dart';
 
 /// 应用路由：未登录 → 登录页；已登录 → 首页。
 class AppRouter {
@@ -43,6 +44,12 @@ class AppRouter {
         GoRoute(
           path: '/notifications',
           builder: (context, state) => const NotificationsPage(),
+        ),
+        GoRoute(
+          path: '/user/:id',
+          builder: (context, state) => UserProfilePage(
+            userId: int.parse(state.pathParameters['id']!),
+          ),
         ),
         GoRoute(
           path: '/settings',

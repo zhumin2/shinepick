@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/error/app_error.dart';
@@ -258,6 +259,8 @@ class _DiscoverPageState extends State<DiscoverPage> {
                                 checkin: item.checkin,
                                 nickname: item.user.nickname,
                                 avatarUrl: item.user.avatarUrl,
+                                onUserTap: () =>
+                                    context.push('/user/${item.user.id}'),
                                 onAction: (a) => _onAction(a, item),
                               ),
                             );

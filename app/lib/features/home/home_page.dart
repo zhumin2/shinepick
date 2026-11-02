@@ -212,6 +212,7 @@ class _HomePageState extends State<HomePage> {
                     checkin: item.checkin,
                     nickname: item.user.nickname,
                     avatarUrl: item.user.avatarUrl,
+                    onUserTap: () => context.push('/user/${item.user.id}'),
                     onAction: (a) => _onAction(
                       a,
                       checkinId: item.checkin.id,

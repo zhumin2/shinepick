@@ -92,6 +92,31 @@ func (s *UserService) Profile(ctx context.Context, uid int64) (*ProfileVO, error
 	return toProfileVO(u, stats), nil
 }
 
+// OtherProfile 他人公开主页（S9）：只暴露公开字段（无手机号/未成年标记）。
+// 返回 (profile, notFound)。
+func (s *UserService) OtherProfile(ctx context.Context, viewerUID, targetUID int64) (*ProfileVO, bool, error) {
+	if targetUID == viewerUID {
+		vo, err := s.Profile(ctx, targetUID)
+		return vo, false, err
+	}
+	u, err := s.repo.ByID(ctx, targetUID)
+	if err != nil {
+		return nil, true, err
+	}
+	if u.Status != 0 {
+		return nil, true, nil // 封禁用户主页不可见
+	}
+	stats := &UserStats{}
+	if s.checkins != nil {
+		if n, err := s.checkins.CountPublicByUser(ctx, targetUID); err == nil {
+			stats.CheckinCount = int(n)
+		}
+	}
+	vo := toProfileVO(u, stats)
+	vo.IsMinor = false // 他人视角不暴露未成年标记
+	return vo, false, nil
+}
+
 // normalizeDate 归一日期字符串：兼容 "2006-01-02" 与 parseTime 扫描出的
 // RFC3339 全格式（DATE 列经 database/sql 转 string 会带时间与时区）。
 func normalizeDate(d string) string {

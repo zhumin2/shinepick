@@ -14,6 +14,7 @@ class FeedCard extends StatelessWidget {
   final String? avatarUrl;
   final int streakDays;
   final void Function(String action)? onAction;
+  final VoidCallback? onUserTap;
 
   const FeedCard({
     super.key,
@@ -22,6 +23,7 @@ class FeedCard extends StatelessWidget {
     this.avatarUrl,
     this.streakDays = 0,
     this.onAction,
+    this.onUserTap,
   });
 
   @override
@@ -45,15 +47,22 @@ class FeedCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
             child: Row(
               children: [
-                Avatar(url: avatarUrl, nickname: nickname, size: 26),
+                GestureDetector(
+                  onTap: onUserTap,
+                  child: Avatar(url: avatarUrl, nickname: nickname, size: 26),
+                ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    '$nickname · ${c.categoryLabel} · ${_timeLabel()}',
-                    style: const TextStyle(
-                        fontSize: 12, color: AppTheme.textSub),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onUserTap,
+                    child: Text(
+                      '$nickname · ${c.categoryLabel} · ${_timeLabel()}',
+                      style: const TextStyle(
+                          fontSize: 12, color: AppTheme.textSub),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
                 Text(c.visibilityLabel,
