@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/error/app_error.dart';
 import '../../core/utils/image_compressor.dart';
+import '../../shared/widgets/emoji_picker_sheet.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/checkin.dart';
 import '../../shared/widgets/toast.dart';
@@ -111,6 +112,26 @@ class _CheckinSheetState extends State<CheckinSheet> {
       setState(() => _uploading.add(name));
       await _uploadOne(name, await f.readAsBytes());
     }
+  }
+
+  /// 打开内置 emoji 面板，选中插入内容光标处（不依赖系统 emoji 键盘）。
+  Future<void> _showEmojiPicker() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    EmojiPickerSheet.show(
+      context,
+      onEmojiSelected: (emoji) {
+        final sel = _content.selection;
+        final base = sel.baseOffset >= 0 ? sel.baseOffset : _content.text.length;
+        final text = _content.text;
+        if (text.runes.length + emoji.runes.length <= 500) {
+          _content.value = TextEditingValue(
+            text: text.replaceRange(
+                base, sel.extentOffset < 0 ? base : sel.extentOffset, emoji),
+            selection: TextSelection.collapsed(offset: base + emoji.runes.length),
+          );
+        }
+      },
+    );
   }
 
   /// 上传单张图片：压缩 → 带进度上传 → 失败自动重试一次 → 存入 _failed 供手动重试。
@@ -254,18 +275,31 @@ class _CheckinSheetState extends State<CheckinSheet> {
             ),
           ),
           const SizedBox(height: 16),
-          // 内容
+          // 内容（右下角表情按钮，点开内置 emoji 面板）
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: TextField(
-              controller: _content,
-              maxLines: 3,
-              maxLength: 500,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: '今天______（如：${_hints[_category]}）',
-                counterText: '',
-              ),
+            child: Stack(
+              children: [
+                TextField(
+                  controller: _content,
+                  maxLines: 3,
+                  maxLength: 500,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: '今天______（如：${_hints[_category]}）',
+                    counterText: '',
+                  ),
+                ),
+                Positioned(
+                  right: 8,
+                  bottom: 8,
+                  child: GestureDetector(
+                    onTap: _showEmojiPicker,
+                    child: const Icon(Icons.emoji_emotions_outlined,
+                        size: 22, color: AppTheme.textSub),
+                  ),
+                ),
+              ],
             ),
           ),
           // 情绪标签（多选，最多 3 个）
