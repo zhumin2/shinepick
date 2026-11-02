@@ -7,6 +7,7 @@ import '../../core/error/app_error.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/checkin.dart';
 import '../../shared/widgets/avatar.dart';
+import '../../shared/widgets/emoji_text.dart';
 import '../../shared/widgets/toast.dart';
 import '../auth/auth_controller.dart';
 import '../checkin/checkin_controller.dart';
@@ -305,7 +306,7 @@ class _CommentSheetState extends State<CommentSheet> {
                     ],
                   ),
                   const SizedBox(height: 3),
-                  Text(c.content,
+                  EmojiText(c.content,
                       style: const TextStyle(
                           fontSize: 14, height: 1.5, color: AppTheme.textMain)),
                 ],

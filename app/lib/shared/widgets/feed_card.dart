@@ -4,6 +4,7 @@ import '../../core/theme/app_theme.dart';
 import '../models/checkin.dart';
 import 'avatar.dart';
 import 'image_viewer.dart';
+import 'emoji_text.dart';
 
 /// 微光流打卡卡片（对齐原型 feed-card）：
 /// 品类渐变封面（无图也有）+ meta 行 + 一句话 + 配图 + 胶囊互动钮 + 留言预览。
@@ -64,7 +65,7 @@ class FeedCard extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
-            child: Text(c.content,
+            child: EmojiText(c.content,
                 style: const TextStyle(
                     fontSize: 14, height: 1.55, color: AppTheme.textMain)),
           ),

@@ -37,8 +37,6 @@ class AppTheme {
         primary: primary,
         surface: bg,
       ),
-      // emoji 字体兜底：国产 ROM 缺 emoji 字形时用内置 Noto Color Emoji
-      fontFamilyFallback: const ['Noto Color Emoji'],
     );
     return base.copyWith(
       scaffoldBackgroundColor: bg,
