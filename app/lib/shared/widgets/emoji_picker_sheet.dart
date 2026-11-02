@@ -6,12 +6,10 @@ import '../../core/theme/app_theme.dart';
 /// 分组展示常用表情，点选插入输入框光标处——不依赖系统 emoji 键盘。
 class EmojiPickerSheet extends StatelessWidget {
   final ValueChanged<String> onEmojiSelected;
-  final VoidCallback onClose;
 
   const EmojiPickerSheet({
     super.key,
     required this.onEmojiSelected,
-    required this.onClose,
   });
 
   /// 分组表情集（对齐产品调性：日常、温和、正向）
@@ -21,22 +19,6 @@ class EmojiPickerSheet extends StatelessWidget {
     ('温柔', ['😌', '🤗', '🫶', '💕', '💗', '🥹', '☺️', '😗']),
     ('生活', ['☕', '📚', '🐱', '🐶', '🌸', '🍀', '🍜', '🎸']),
   ];
-
-  /// 静态方法：显示表情面板（底部弹层）
-  static void show(BuildContext context, {required ValueChanged<String> onEmojiSelected}) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.white,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => EmojiPickerSheet(
-        onEmojiSelected: onEmojiSelected,
-        onClose: () => Navigator.of(context).pop(),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,11 +41,7 @@ class EmojiPickerSheet extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.close, size: 20, color: AppTheme.textSub),
-                  onPressed: onClose,
-                ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 28),
               ],
             ),
             const Divider(height: 1, color: AppTheme.divider),

@@ -48,6 +48,8 @@ class _CheckinSheetState extends State<CheckinSheet> {
   final _imageUrls = <String>[]; // 已上传 URL
   final _failed = <_FailedImage>[]; // 上传失败的（可重试）
   final _progress = <String, double>{}; // 上传进度 0.0 ~ 1.0
+  bool _showEmoji = false; // 是否正在显示内置表情面板
+  final _contentFocus = FocusNode(); // 内容框焦点（表情面板打开时保持光标）
 
   CheckinController get _checkin => context.read<CheckinController>();
 
@@ -81,6 +83,7 @@ class _CheckinSheetState extends State<CheckinSheet> {
   void dispose() {
     _content.removeListener(_onContentChanged);
     _content.dispose();
+    _contentFocus.dispose();
     super.dispose();
   }
 
@@ -101,28 +104,34 @@ class _CheckinSheetState extends State<CheckinSheet> {
     }
   }
 
-  /// 打开内置 emoji 面板，选中插入内容光标处（不依赖系统 emoji 键盘）。
+  /// 切换内置 emoji 面板（嵌在弹层底部，替代系统键盘位置）。
+  /// 打开时收起系统键盘并保持输入框焦点（光标闪烁），选中的 emoji 插入光标处。
   /// 插入用 UTF-16 码元坐标（Dart String 原生坐标系），避免乱码。
-  Future<void> _showEmojiPicker() async {
+  void _toggleEmojiPicker() {
+    if (_showEmoji) {
+      setState(() => _showEmoji = false);
+      return;
+    }
+    // 收起系统键盘但保持输入框焦点
     FocusManager.instance.primaryFocus?.unfocus();
-    EmojiPickerSheet.show(
-      context,
-      onEmojiSelected: (emoji) {
-        final sel = _content.selection;
-        final base = sel.baseOffset >= 0 ? sel.baseOffset : _content.text.length;
-        final extent = sel.extentOffset >= 0 ? sel.extentOffset : base;
-        final text = _content.text;
-        // 长度校验用 runes（字符数），插入/光标用码元坐标（UTF-16）
-        if (text.runes.length + emoji.runes.length <= 500) {
-          final start = base < extent ? base : extent;
-          final end = base < extent ? extent : base;
-          _content.value = TextEditingValue(
-            text: text.replaceRange(start, end, emoji),
-            selection: TextSelection.collapsed(offset: start + emoji.length),
-          );
-        }
-      },
-    );
+    _contentFocus.requestFocus();
+    setState(() => _showEmoji = true);
+  }
+
+  /// 把 emoji 插入内容光标处（UTF-16 码元坐标）。
+  void _insertEmoji(String emoji) {
+    final sel = _content.selection;
+    final base = sel.baseOffset >= 0 ? sel.baseOffset : _content.text.length;
+    final extent = sel.extentOffset >= 0 ? sel.extentOffset : base;
+    final text = _content.text;
+    if (text.runes.length + emoji.runes.length <= 500) {
+      final start = base < extent ? base : extent;
+      final end = base < extent ? extent : base;
+      _content.value = TextEditingValue(
+        text: text.replaceRange(start, end, emoji),
+        selection: TextSelection.collapsed(offset: start + emoji.length),
+      );
+    }
   }
 
   /// 上传单张图片：压缩 → 带进度上传 → 失败自动重试一次 → 存入 _failed 供手动重试。
@@ -272,6 +281,7 @@ class _CheckinSheetState extends State<CheckinSheet> {
               children: [
                 TextField(
                   controller: _content,
+                  focusNode: _contentFocus,
                   maxLines: 3,
                   maxLength: 500,
                   autofocus: true,
@@ -284,7 +294,7 @@ class _CheckinSheetState extends State<CheckinSheet> {
                   right: 8,
                   bottom: 8,
                   child: GestureDetector(
-                    onTap: _showEmojiPicker,
+                    onTap: _toggleEmojiPicker,
                     child: const Icon(Icons.emoji_emotions_outlined,
                         size: 22, color: AppTheme.textSub),
                   ),
@@ -292,6 +302,20 @@ class _CheckinSheetState extends State<CheckinSheet> {
               ],
             ),
           ),
+          const SizedBox(height: 12),
+          // 表情面板（内嵌：替代系统键盘位置，输入框保持可见+焦点）
+          if (_showEmoji)
+            Container(
+              height: 240,
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              decoration: BoxDecoration(
+                color: AppTheme.bg,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.divider),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: EmojiPickerSheet(onEmojiSelected: _insertEmoji),
+            ),
           const SizedBox(height: 12),
           // 配图
           Padding(
