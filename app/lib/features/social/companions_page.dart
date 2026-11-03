@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/error/app_error.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/models/checkin.dart' show parseLocalTime;
 import '../../shared/widgets/avatar.dart';
 import '../auth/auth_controller.dart';
 
@@ -127,7 +128,7 @@ class _CompanionsPageState extends State<CompanionsPage> {
               id: (item['id'] as num).toInt(),
               nickname: item['nickname'] as String? ?? '拾光用户',
               avatarUrl: item['avatar_url'] as String? ?? '',
-              since: DateTime.tryParse(item['since'] as String? ?? ''),
+              since: parseLocalTime(item['since'] as String? ?? ''),
             ),
         ],
       ),

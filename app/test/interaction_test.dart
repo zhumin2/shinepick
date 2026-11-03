@@ -78,6 +78,26 @@ void main() {
       // 新规则：今天 → HH:mm（不再用相对时间）
       expect(c.timeLabel, '12:00');
     });
+
+    test('parseLocalTime 带时区偏移的串归一到本地时区', () {
+      // 服务端返回 +08:00（或任意偏移）时，Dart 解析结果是 UTC 换算值
+      // （isUtc=true），直接取字段显示会差 8 小时；parseLocalTime 必须归一回来。
+      final now = DateTime.now();
+      final localNoon = DateTime(now.year, now.month, now.day, 12);
+      final off = localNoon.timeZoneOffset;
+      final sign = off.isNegative ? '-' : '+';
+      final hh = off.inHours.abs().toString().padLeft(2, '0');
+      final mm = (off.inMinutes.abs() % 60).toString().padLeft(2, '0');
+      // 模拟服务端：本地钟面值 + 本机偏移（与服务器返回 +08:00 同构，
+      // 且在任意时区的测试机上瞬间都等于 localNoon）
+      final serverStr =
+          '${localNoon.toIso8601String().substring(0, 19)}$sign$hh:$mm';
+      final parsed = parseLocalTime(serverStr);
+      expect(parsed, isNotNull);
+      expect(parsed!.isUtc, isFalse);
+      expect(parsed.hour, 12, reason: 'server=$serverStr');
+      expect(parsed.day, localNoon.day);
+    });
   });
 
   group('FeedCard 互动按钮三态', () {

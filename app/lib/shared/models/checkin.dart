@@ -2,6 +2,12 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+/// 解析服务端 ISO 时间并归一到本地时区。
+/// 必须显式 toLocal()：Dart 对带时区偏移的串（如 +08:00）解析后返回的是
+/// UTC 换算值（isUtc=true），直接取字段显示会差 8 小时。
+DateTime? parseLocalTime(String? s) =>
+    s == null ? null : DateTime.tryParse(s)?.toLocal();
+
 /// 友好时间标签（打卡/留言/通知共用）：
 /// 今天 → HH:mm；昨天 → 昨天 HH:mm；今年 → MM-DD HH:mm；跨年 → yyyy-MM-DD HH:mm。
 String friendlyTime(DateTime? t) {
@@ -104,9 +110,7 @@ class Checkin {
       customName: json['custom_name'] as String? ?? '',
       visibility: (json['visibility'] as num?)?.toInt() ?? 2,
       checkinDate: json['checkin_date'] as String? ?? '',
-      createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'] as String)
-          : null,
+      createdAt: parseLocalTime(json['created_at'] as String?),
       myReactions: (json['my_reactions'] as List<dynamic>?)
               ?.map((e) => (e as num).toInt())
               .toList() ??
@@ -268,9 +272,7 @@ class CommentVO {
         avatarUrl: json['avatar_url'] as String? ?? '',
         content: json['content'] as String? ?? '',
         isFeatured: json['is_featured'] == true,
-        createdAt: json['created_at'] != null
-            ? DateTime.tryParse(json['created_at'] as String)
-            : null,
+        createdAt: parseLocalTime(json['created_at'] as String?),
       );
 
   CommentVO copyWith({bool? isFeatured}) => CommentVO(
@@ -325,9 +327,7 @@ class NotificationVO {
         aggCount: (json['agg_count'] as num?)?.toInt() ?? 1,
         copy: json['copy'] as String? ?? '',
         isRead: json['is_read'] == true,
-        createdAt: json['created_at'] != null
-            ? DateTime.tryParse(json['created_at'] as String)
-            : null,
+        createdAt: parseLocalTime(json['created_at'] as String?),
       );
 
   /// 相对时间。
@@ -420,9 +420,7 @@ class BadgeVO {
         icon: json['icon'] as String? ?? '',
         description: json['description'] as String? ?? '',
         owned: json['owned'] == true,
-        earnedAt: json['earned_at'] != null
-            ? DateTime.tryParse(json['earned_at'] as String)
-            : null,
+        earnedAt: parseLocalTime(json['earned_at'] as String?),
       );
 }
 
