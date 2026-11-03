@@ -208,6 +208,29 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 10),
               for (final item in checkin.dailySelected)
                 GestureDetector(
+                  onTap: () => context.push('/checkin/${item.checkin.id}'),
+                  onLongPress: () => _longPress(item),
+                  child: FeedCard(
+                    checkin: item.checkin,
+                    nickname: item.user.nickname,
+                    avatarUrl: item.user.avatarUrl,
+                    onUserTap: () => context.push('/user/${item.user.id}'),
+                    onAction: (a) => _onAction(
+                      a,
+                      checkinId: item.checkin.id,
+                      ownerId: item.user.id,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 8),
+            ],
+            // 同路人动态：互为同路人的最新拾光（无内容自动隐藏）
+            if (checkin.companionFeed.isNotEmpty) ...[
+              const _SectionTitle('同路人在做'),
+              const SizedBox(height: 10),
+              for (final item in checkin.companionFeed)
+                GestureDetector(
+                  onTap: () => context.push('/checkin/${item.checkin.id}'),
                   onLongPress: () => _longPress(item),
                   child: FeedCard(
                     checkin: item.checkin,
@@ -243,7 +266,8 @@ class _HomePageState extends State<HomePage> {
             else
               for (final c in checkin.items)
                 GestureDetector(
-                  // 长按自己的打卡：改可见范围 / 删除
+                  // 点击进详情；长按自己的打卡：改可见范围 / 删除
+                  onTap: () => context.push('/checkin/${c.id}'),
                   onLongPress: () => _ownerActions(c),
                   child: FeedCard(
                     checkin: c,

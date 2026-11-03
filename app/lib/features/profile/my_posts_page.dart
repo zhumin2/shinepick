@@ -242,7 +242,8 @@ class _MyPostsPageState extends State<MyPostsPage> {
             }
             final c = _items[i];
             return GestureDetector(
-              // 长按自己的打卡：改可见范围 / 删除
+              // 点击进详情；长按自己的打卡：改可见范围 / 删除
+              onTap: () => context.push('/checkin/${c.id}'),
               onLongPress: () => _ownerActions(c),
               child: FeedCard(
                 checkin: c,

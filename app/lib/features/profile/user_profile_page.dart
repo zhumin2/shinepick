@@ -183,6 +183,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   checkin: c,
                   nickname: nickname,
                   avatarUrl: avatarUrl,
+                  onTap: () => context.push('/checkin/${c.id}'),
                 ),
           ],
         ),

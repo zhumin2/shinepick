@@ -218,6 +218,25 @@ func toFeedItem(c *repository.CheckinWithUser) *FeedItem {
 	}
 }
 
+// CompanionsFeed 同路人动态流：互为同路人的最新拾光（排除自己），游标分页。
+func (s *FeedService) CompanionsFeed(ctx context.Context, uid, cursor int64) ([]*FeedItem, int64, error) {
+	const limit = 20
+	list, err := s.repo.ListCompanionFeed(ctx, uid, cursor, limit+1)
+	if err != nil {
+		return nil, 0, err
+	}
+	next := int64(0)
+	if len(list) > limit {
+		list = list[:limit]
+		next = list[len(list)-1].ID
+	}
+	out := make([]*FeedItem, 0, len(list))
+	for _, c := range list {
+		out = append(out, toFeedItem(c))
+	}
+	return out, next, nil
+}
+
 // Explore 发现页：品类过滤（0=全部）+ 游标分页（S4-05）。
 func (s *FeedService) Explore(ctx context.Context, category int8, cursor int64) ([]*FeedItem, int64, error) {
 	const limit = 20

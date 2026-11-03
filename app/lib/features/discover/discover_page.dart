@@ -259,6 +259,8 @@ class _DiscoverPageState extends State<DiscoverPage> {
                                 checkin: item.checkin,
                                 nickname: item.user.nickname,
                                 avatarUrl: item.user.avatarUrl,
+                                onTap: () => context
+                                    .push('/checkin/${item.checkin.id}'),
                                 onUserTap: () =>
                                     context.push('/user/${item.user.id}'),
                                 onAction: (a) => _onAction(a, item),

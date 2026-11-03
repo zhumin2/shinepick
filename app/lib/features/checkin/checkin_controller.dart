@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
@@ -37,6 +38,7 @@ class CheckinController extends ChangeNotifier {
   // S4: Feed 状态
   List<FeedItem> _dailySelected = [];
   List<FeedItem> _doing = [];
+  List<FeedItem> _companionFeed = [];
   bool _feedLoading = false;
   bool _feedOffline = false;
 
@@ -50,6 +52,7 @@ class CheckinController extends ChangeNotifier {
   bool get publishing => _publishing;
   List<FeedItem> get dailySelected => List.unmodifiable(_dailySelected);
   List<FeedItem> get doing => List.unmodifiable(_doing);
+  List<FeedItem> get companionFeed => List.unmodifiable(_companionFeed);
   bool get feedLoading => _feedLoading;
   bool get feedOffline => _feedOffline;
 
@@ -173,6 +176,8 @@ class CheckinController extends ChangeNotifier {
     _feedLoading = true;
     _feedOffline = false;
     notifyListeners();
+    // 同路人动态并行刷新，失败静默（不影响主 Feed）
+    unawaited(loadCompanionFeed());
     try {
       final data = await auth.api.get<Map<String, dynamic>>(
         '/feed',
@@ -190,6 +195,21 @@ class CheckinController extends ChangeNotifier {
       }
     } finally {
       _feedLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// 拉取同路人动态（GET /feed/companions）：互为同路人的最新拾光。
+  Future<void> loadCompanionFeed() async {
+    try {
+      final data = await auth.api.get<Map<String, dynamic>>(
+        '/feed/companions',
+        parser: (d) => Map<String, dynamic>.from(d as Map),
+      );
+      _companionFeed = _parseFeedItems(data['items']);
+    } catch (_) {
+      // 静默：同路人动态加载失败不打扰主页
+    } finally {
       notifyListeners();
     }
   }

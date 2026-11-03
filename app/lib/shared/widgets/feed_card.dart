@@ -16,6 +16,7 @@ class FeedCard extends StatelessWidget {
   final int streakDays;
   final void Function(String action)? onAction;
   final VoidCallback? onUserTap;
+  final VoidCallback? onTap;
 
   const FeedCard({
     super.key,
@@ -25,13 +26,14 @@ class FeedCard extends StatelessWidget {
     this.streakDays = 0,
     this.onAction,
     this.onUserTap,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final c = checkin;
     final cat = c.categoryEnum ?? CheckinCategory.sport;
-    return Container(
+    final card = Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -175,6 +177,9 @@ class FeedCard extends StatelessWidget {
         ],
       ),
     );
+    // 卡片整体可点（进详情）；内部图片/头像/按钮的 GestureDetector 优先响应
+    if (onTap == null) return card;
+    return GestureDetector(onTap: onTap, child: card);
   }
 
   /// 时间标签：今天 HH:mm / 昨天 HH:mm / 更早 MM-DD HH:mm。

@@ -185,6 +185,24 @@ func (r *CheckinRepo) ListDailyCandidates(ctx context.Context, date string, limi
 	return list, err
 }
 
+// ListCompanionFeed 同路人动态：互为同路人的用户的同路人可见打卡（排除自己），新→旧。
+// 每对关系经 unique index (user_a,user_b) 归一，JOIN 不会产生重复行。
+func (r *CheckinRepo) ListCompanionFeed(ctx context.Context, uid, cursor int64, limit int) ([]*CheckinWithUser, error) {
+	q := r.db.WithContext(ctx).Model(&model.Checkin{}).
+		Select(withUserSelect).
+		Joins("JOIN `users` ON `users`.`id` = `checkins`.`user_id`").
+		Joins("JOIN `companion_relations` cr ON (cr.user_a = `checkins`.`user_id` AND cr.user_b = ?) "+
+			"OR (cr.user_b = `checkins`.`user_id` AND cr.user_a = ?)", uid, uid).
+		Where("cr.status = 0 AND checkins.visibility = 2 AND checkins.status = 0 AND checkins.user_id <> ?", uid).
+		Where("users.status = 0")
+	if cursor > 0 {
+		q = q.Where("checkins.id < ?", cursor)
+	}
+	var list []*CheckinWithUser
+	err := q.Order("checkins.id DESC").Limit(limit).Find(&list).Error
+	return list, err
+}
+
 // ListExplore 发现页：按品类（0=全部）游标分页，同路人可见。
 func (r *CheckinRepo) ListExplore(ctx context.Context, category int8, cursor int64, limit int) ([]*CheckinWithUser, error) {
 	q := r.db.WithContext(ctx).Model(&model.Checkin{}).

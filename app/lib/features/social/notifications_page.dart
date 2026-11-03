@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
@@ -95,7 +96,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                     separatorBuilder: (_, __) => const SizedBox(height: 4),
                     itemBuilder: (_, i) {
                       final n = social.items[i];
-                      return Container(
+                      final card = Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 12),
                         decoration: BoxDecoration(
@@ -136,6 +137,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
                             ),
                           ],
                         ),
+                      );
+                      // 有对应打卡的通知（点亮/拥抱/同路/留言）可点进详情；
+                      // 系统通知（type=5）无打卡不可跳
+                      if (n.checkinId == null) return card;
+                      return GestureDetector(
+                        onTap: () =>
+                            context.push('/checkin/${n.checkinId}'),
+                        child: card,
                       );
                     },
                   ),

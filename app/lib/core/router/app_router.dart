@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../features/auth/auth_controller.dart';
 import '../../features/auth/login_page.dart';
+import '../../features/checkin/checkin_detail_page.dart';
 import '../../features/settings/settings_page.dart';
 import '../../features/shell/shell_page.dart';
 import '../../features/social/companions_page.dart';
@@ -51,6 +52,12 @@ class AppRouter {
           path: '/user/:id',
           builder: (context, state) => UserProfilePage(
             userId: int.parse(state.pathParameters['id']!),
+          ),
+        ),
+        GoRoute(
+          path: '/checkin/:id',
+          builder: (context, state) => CheckinDetailPage(
+            checkinId: int.parse(state.pathParameters['id']!),
           ),
         ),
         GoRoute(

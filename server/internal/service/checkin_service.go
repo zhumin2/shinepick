@@ -290,15 +290,17 @@ func (s *CheckinService) List(ctx context.Context, viewerUID, targetUID int64, c
 }
 
 // Detail 详情：作者看全部，他人仅 visibility=2（否则 5002）。
-func (s *CheckinService) Detail(ctx context.Context, viewerUID, id int64) (*CheckinVO, error) {
-	c, err := s.repo.ByID(ctx, id)
+// Detail 详情 + 作者信息（详情页头部展示用）。非作者仅同路人可见（visibility=2）。
+func (s *CheckinService) Detail(ctx context.Context, viewerUID, id int64) (*CheckinVO, *FeedUser, error) {
+	row, err := s.repo.GetWithUser(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if c.Status != 0 || (c.UserID != viewerUID && c.Visibility != 2) {
-		return nil, gorm.ErrRecordNotFound
+	if row.Status != 0 || (row.UserID != viewerUID && row.Visibility != 2) {
+		return nil, nil, gorm.ErrRecordNotFound
 	}
-	return toCheckinVO(c), nil
+	vo := toCheckinVO(&row.Checkin)
+	return vo, &FeedUser{ID: row.UserID, Nickname: row.Nickname, AvatarURL: row.AvatarURL}, nil
 }
 
 // Delete 软删除自己的打卡（幂等：已删返回 NotFound 语义由 handler 映射）。

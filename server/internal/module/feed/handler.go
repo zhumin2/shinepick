@@ -23,7 +23,29 @@ func NewHandler(svc *service.FeedService, inter *service.InteractionService, soc
 
 func (h *Handler) Register(r *gin.RouterGroup) {
 	r.GET("/feed", h.Today)
+	r.GET("/feed/companions", h.Companions)
 	r.GET("/explore", h.Explore)
+}
+
+// Companions GET /feed/companions?cursor= —— 同路人动态流（互为同路人的最新拾光）。
+func (h *Handler) Companions(c *gin.Context) {
+	cursor, _ := strconv.ParseInt(c.Query("cursor"), 10, 64)
+	uid := c.GetInt64("uid")
+	items, next, err := h.svc.CompanionsFeed(c, uid, cursor)
+	if err != nil {
+		httpx.Fail(c, code.ErrInternal)
+		return
+	}
+	vos := make([]*service.CheckinVO, 0, len(items))
+	for _, it := range items {
+		vos = append(vos, &it.CheckinVO)
+	}
+	h.inter.FillMyReactions(c, uid, vos)
+	h.inter.FillPreviewComments(c, vos)
+	if h.social != nil {
+		items = h.social.FilterBlockedFeedItems(c, uid, items)
+	}
+	httpx.OK(c, gin.H{"items": items, "next_cursor": next})
 }
 
 // Today GET /feed —— 今日微光 + 同品类打卡的陌生人。

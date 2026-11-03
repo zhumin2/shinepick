@@ -46,14 +46,14 @@ func (h *Handler) Create(c *gin.Context) {
 	httpx.OK(c, res)
 }
 
-// Detail GET /checkins/:id —— 打卡详情。
+// Detail GET /checkins/:id —— 打卡详情（含作者信息，供详情页头部与跳转）。
 func (h *Handler) Detail(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || id <= 0 {
 		httpx.FailMsg(c, code.ErrBadRequest, "打卡 id 不合法")
 		return
 	}
-	vo, err := h.svc.Detail(c, c.GetInt64("uid"), id)
+	vo, author, err := h.svc.Detail(c, c.GetInt64("uid"), id)
 	if err != nil {
 		h.fail(c, err)
 		return
@@ -72,7 +72,7 @@ func (h *Handler) Detail(c *gin.Context) {
 		h.inter.FillMyReactions(c, viewer, items)
 		h.inter.FillPreviewComments(c, items)
 	}
-	httpx.OK(c, vo)
+	httpx.OK(c, gin.H{"checkin": vo, "user": author})
 }
 
 // Delete DELETE /checkins/:id —— 软删除自己的打卡。
