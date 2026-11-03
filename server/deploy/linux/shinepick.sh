@@ -155,14 +155,15 @@ do_backup() {
 
 do_update() {
   echo "更新拾光服务..."
+  # 从当前目录向上找 git 仓库根（脚本装在 /usr/local/bin，自身无仓库上下文；
+  # 须在仓库内或其子目录执行）
   local REPO_DIR
-  REPO_DIR=$(dirname "$SRC_DIR")
-  # 找 git 仓库根
+  REPO_DIR=$(pwd)
   while [ "$REPO_DIR" != "/" ] && [ ! -d "$REPO_DIR/.git" ]; do
     REPO_DIR=$(dirname "$REPO_DIR")
   done
   if [ ! -d "$REPO_DIR/.git" ]; then
-    fail "未找到 git 仓库（请在服务器上 cd 到 shinepick 仓库目录后执行）"
+    fail "未找到 git 仓库（请先 cd 到 shinepick 仓库目录后执行）"
     return 1
   fi
   cd "$REPO_DIR"
@@ -179,7 +180,8 @@ do_update() {
   info "更新 API 二进制..."
   local BUILT=0
   if command -v go >/dev/null 2>&1; then
-    if (cd server && CGO_ENABLED=0 go build -o "$BASE/shinepick-api.new" ./cmd/api); then
+    # 服务器在国内：未显式配置 GOPROXY 时走 goproxy.cn，避免官方源被墙卡死
+    if (cd server && CGO_ENABLED=0 GOPROXY="${GOPROXY:-https://goproxy.cn,direct}" go build -o "$BASE/shinepick-api.new" ./cmd/api); then
       BUILT=1
       ok "go 编译成功"
     else
