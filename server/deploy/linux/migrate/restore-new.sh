@@ -45,7 +45,11 @@ step() { printf '\n==== %s ====\n' "$*"; }
 
 usage() {
   cat <<'EOF'
-用法: sudo ./restore-new.sh <迁移包.tar.gz|解包目录> [选项]
+用法: sudo ./restore-new.sh [迁移包.tar.gz|解包目录] [选项]
+
+不传第一个路径参数时默认使用当前目录，适用于:
+  cd shinepick-migrate-*/
+  sudo ./restore-new.sh --public-url http://8.134.144.35:8080
 
 选项:
   --public-url URL    新对外地址，如 http://8.134.144.35:8080
@@ -69,8 +73,12 @@ EOF
 case "${1:-}" in
   -h|--help) usage; exit 0 ;;
 esac
-[ $# -ge 1 ] || { usage; exit 1; }
-BUNDLE_ARG="$1"; shift
+if [ $# -ge 1 ] && [[ "$1" != -* ]]; then
+  BUNDLE_ARG="$1"; shift
+else
+  # 允许 cd 到解包目录后直接执行，不必再传路径
+  BUNDLE_ARG="."
+fi
 while [ $# -gt 0 ]; do
   case "$1" in
     --public-url)
@@ -160,8 +168,8 @@ else
   BUNDLE="$(dirname "$MANIFEST_PATH")"
 fi
 
-[ -f "$BUNDLE/MANIFEST" ] || die "找不到 $BUNDLE/MANIFEST"
-[ -f "$BUNDLE/SHA256SUMS" ] || die "找不到 $BUNDLE/SHA256SUMS"
+[ -f "$BUNDLE/MANIFEST" ] || die "找不到 $BUNDLE/MANIFEST；请在解包目录内运行，或把迁移包路径作为第一个参数"
+[ -f "$BUNDLE/SHA256SUMS" ] || die "找不到 $BUNDLE/SHA256SUMS；迁移包不完整"
 ( cd "$BUNDLE" && sha256sum --quiet -c SHA256SUMS ) || die "包内文件校验失败"
 ok "包内文件校验通过（$BUNDLE）"
 

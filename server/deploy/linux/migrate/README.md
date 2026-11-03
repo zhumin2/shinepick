@@ -78,6 +78,8 @@ sudo ./restore-new.sh --public-url http://8.134.144.35:8080 --install-deps
 ```
 
 > 如果备份用了 `--zstd`，解压命令改为 `tar --zstd -xf shinepick-migrate-*.tar.zst`。
+>
+> `restore-new.sh` 的第一个参数是迁移包或解包目录，省略时默认当前目录；上面的命令就是 `cd` 到解包目录后直接执行。
 
 如果新机已自行安装 MySQL 8.0 / Redis / Nginx，去掉 `--install-deps`。RHEL 系首次安装的 MySQL root 临时密码在 `/var/log/mysqld.log`，用 `--mysql-root-pass` 传入。
 
