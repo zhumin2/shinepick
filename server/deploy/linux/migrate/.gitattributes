@@ -1,0 +1,4 @@
+# 服务器脚本必须保持 LF，避免在 Windows 上 checkout 后被转成 CRLF 导致
+# Linux 上出现 "bad interpreter: /usr/bin/env bash^M"
+*.sh text eol=lf
+.gitattributes text eol=lf

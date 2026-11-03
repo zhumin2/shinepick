@@ -46,3 +46,8 @@ GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/shinepick
 - [ ] `PUBLIC_BASE_URL` 指向公网域名（Nginx 反代 8080 + HTTPS）
 - [ ] `SMS_TYPE=aliyun` / `AUDIT_TYPE=remote` 接入真实通道
 - [ ] MySQL 只监听 127.0.0.1，定期 `mysqldump` 备份
+
+## 服务器迁移
+
+旧机 `129.226.159.168` → 新机 `8.134.144.35` 的备份/恢复脚本与操作步骤见
+[`migrate/README.md`](migrate/README.md)。
