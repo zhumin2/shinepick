@@ -151,7 +151,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   _divider(),
                   _Stat('${stats['streak_days'] ?? 0}', '连续天数'),
                   _divider(),
-                  _Stat('${stats['companions'] ?? 0}', '同路人'),
+                  // 同路人可点：查看 TA 的同路人列表
+                  GestureDetector(
+                    onTap: () => context.push('/companions/${widget.userId}'),
+                    child: _Stat('${stats['companions'] ?? 0}', '同路人'),
+                  ),
                 ],
               ),
             ),

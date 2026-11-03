@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// 全屏图片查看器：支持多图滑动、双指缩放、点击关闭。
+import 'image_saver.dart';
+
+/// 全屏图片查看器：支持多图滑动、双指缩放、点击关闭、长按/按钮保存。
 class ImageViewerPage extends StatefulWidget {
   final List<String> urls;
   final int initialIndex;
@@ -88,6 +90,14 @@ class _ImageViewerPageState extends State<ImageViewerPage> {
                           style: const TextStyle(color: Colors.white, fontSize: 13),
                         ),
                       ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.download_outlined,
+                          color: Colors.white, size: 24),
+                      tooltip: '保存图片',
+                      onPressed: () =>
+                          saveImage(context, widget.urls[_currentIndex]),
+                    ),
                   ],
                 ),
               ],
@@ -109,17 +119,20 @@ class _ZoomableImage extends StatelessWidget {
     return InteractiveViewer(
       maxScale: 4.0,
       child: Center(
-        child: Image.network(
-          url,
-          fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.broken_image_outlined, color: Colors.white38, size: 48),
-                SizedBox(height: 8),
-                Text('图片加载失败', style: TextStyle(color: Colors.white38)),
-              ],
+        child: GestureDetector(
+          onLongPress: () => saveImage(context, url),
+          child: Image.network(
+            url,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.broken_image_outlined, color: Colors.white38, size: 48),
+                  SizedBox(height: 8),
+                  Text('图片加载失败', style: TextStyle(color: Colors.white38)),
+                ],
+              ),
             ),
           ),
         ),

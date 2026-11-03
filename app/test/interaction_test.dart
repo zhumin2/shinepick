@@ -61,6 +61,9 @@ void main() {
 
   group('CommentVO', () {
     test('解析与相对时间', () {
+      // 固定今天 12:00：若用 now-5min，零点前后跑测试会跨天（23:5x 变「昨天」）
+      final noon = DateTime(
+          DateTime.now().year, DateTime.now().month, DateTime.now().day, 12);
       final c = CommentVO.fromJson({
         'id': 3,
         'checkin_id': 10,
@@ -68,17 +71,12 @@ void main() {
         'nickname': 'pig',
         'avatar_url': 'http://x/a.png',
         'content': '江边跑步真的舒服',
-        'created_at': DateTime.now()
-            .subtract(const Duration(minutes: 5))
-            .toIso8601String(),
+        'created_at': noon.toIso8601String(),
       });
       expect(c.nickname, 'pig');
       expect(c.content, '江边跑步真的舒服');
       // 新规则：今天 → HH:mm（不再用相对时间）
-      final t = DateTime.now().subtract(const Duration(minutes: 5));
-      final hm =
-          '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-      expect(c.timeLabel, hm);
+      expect(c.timeLabel, '12:00');
     });
   });
 

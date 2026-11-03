@@ -186,14 +186,44 @@ class _ProfilePageState extends State<ProfilePage> {
                   _StatItem(
                       value: '${u?.streakDays ?? 0}', label: '连续天数'),
                   const _VerticalDivider(),
-                  _StatItem(
-                      value: '${u?.companions ?? 0}', label: '同路人'),
+                  // 同路人可点：进入同路人列表（需已登录拿到自己的 id）
+                  if (u != null)
+                    GestureDetector(
+                      onTap: () => context.push('/companions/${u.id}'),
+                      child: _StatItem(
+                          value: '${u.companions}', label: '同路人'),
+                    )
+                  else
+                    _StatItem(
+                        value: '${u?.companions ?? 0}', label: '同路人'),
                 ],
               ),
             ),
             const SizedBox(height: 16),
             // 最近的拾光（原型 list-row：品类色块 + 标题 + 时间 · 品类 · 可见性）
-            const _SectionHeader('最近的拾光'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const _SectionHeader('最近的拾光'),
+                InkWell(
+                  onTap: () => context.push('/my-posts'),
+                  borderRadius: BorderRadius.circular(8),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('全部',
+                            style: TextStyle(
+                                fontSize: 12, color: AppTheme.textSub)),
+                        Icon(Icons.chevron_right,
+                            size: 14, color: AppTheme.textSub),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 10),
             _buildRecent(),
             const SizedBox(height: 16),

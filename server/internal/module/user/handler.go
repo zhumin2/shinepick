@@ -25,6 +25,22 @@ func (h *Handler) Register(r *gin.RouterGroup) {
 	g.PATCH("/me", h.UpdateProfile)
 	g.POST("/me/avatar", h.UploadAvatar)
 	g.GET("/:id", h.OtherProfile)
+	g.GET("/:id/companions", h.Companions)
+}
+
+// Companions GET /users/:id/companions —— 同路人列表（公开信息）。
+func (h *Handler) Companions(c *gin.Context) {
+	targetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || targetID <= 0 {
+		httpx.FailMsg(c, code.ErrBadRequest, "用户 id 不合法")
+		return
+	}
+	items, err := h.svc.Companions(c, targetID)
+	if err != nil {
+		httpx.Fail(c, code.ErrInternal)
+		return
+	}
+	httpx.OK(c, gin.H{"items": items})
 }
 
 // OtherProfile GET /users/:id —— 他人公开主页（无手机号/未成年标记）。

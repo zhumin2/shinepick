@@ -99,7 +99,8 @@ shinepick/
 | GET/PATCH | `/users/me` | 我的资料（含 stats） |
 | POST | `/users/me/avatar` | 头像上传（≤2MB，jpg/png/webp） |
 | GET | `/users/:id` | **他人公开主页**（无手机号/未成年标记；封禁返回 5001） |
-| GET | `/users/:id/checkins` | 某人的公开打卡列表 |
+| GET | `/users/:id/checkins` | 某人的打卡列表（自己=全部，他人=同路人可见），游标分页 |
+| GET | `/users/:id/companions` | 某人的同路人列表（id/nickname/avatar_url/since，排除自己与封禁号） |
 | POST/GET/DELETE | `/checkins` `/checkins/:id` | 发布/列表/详情/软删（含可见范围 1仅自己 2同路人 3小树洞） |
 | POST/DELETE | `/checkins/:id/reactions` | 点亮(1)/拥抱(2)/同路(3)，幂等；同路建关系 |
 | POST/GET | `/checkins/:id/comments` | 留言（≤80 字） |

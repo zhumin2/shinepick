@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -158,6 +159,27 @@ func (r *InteractionRepo) CompanionCount(ctx context.Context, uid int64) (int64,
 		Where("status = 0 AND (user_a = ? OR user_b = ?)", uid, uid).
 		Count(&n).Error
 	return n, err
+}
+
+// CompanionRow 同路人列表行（联表 users，过滤封禁账号）。
+type CompanionRow struct {
+	UID       int64     `gorm:"column:uid"`
+	Nickname  string    `gorm:"column:nickname"`
+	AvatarURL string    `gorm:"column:avatar_url"`
+	Since     time.Time `gorm:"column:since"` // 建立同路的时间
+}
+
+// ListCompanions 某用户的同路人列表（对方公开信息 + 建立时间，最新在前）。
+// 排除自己（历史数据存在给自己打卡点「同路」产生的 user_a=user_b 行）。
+func (r *InteractionRepo) ListCompanions(ctx context.Context, uid int64) ([]CompanionRow, error) {
+	rows := []CompanionRow{}
+	err := r.db.WithContext(ctx).Table("companion_relations AS r").
+		Select("u.id AS uid, u.nickname, u.avatar_url, r.created_at AS since").
+		Joins("JOIN users u ON u.id = CASE WHEN r.user_a = ? THEN r.user_b ELSE r.user_a END", uid).
+		Where("r.status = 0 AND (r.user_a = ? OR r.user_b = ?) AND u.status = 0 AND u.id <> ?", uid, uid, uid).
+		Order("r.created_at DESC").
+		Scan(&rows).Error
+	return rows, err
 }
 
 // MutualCompanion a 与 b 是否互为同路人（通知匿名化判断用，技术文档 6.3）。

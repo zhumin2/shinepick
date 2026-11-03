@@ -117,6 +117,32 @@ func (s *UserService) OtherProfile(ctx context.Context, viewerUID, targetUID int
 	return vo, false, nil
 }
 
+// CompanionVO 同路人列表项（我的页/他人主页共用，只含公开信息）。
+type CompanionVO struct {
+	ID        int64     `json:"id"`
+	Nickname  string    `json:"nickname"`
+	AvatarURL string    `json:"avatar_url"`
+	Since     time.Time `json:"since"` // 建立同路的时间
+}
+
+// Companions 某用户的同路人列表（封禁账号已在查询中过滤）。
+func (s *UserService) Companions(ctx context.Context, uid int64) ([]*CompanionVO, error) {
+	if s.inter == nil {
+		return []*CompanionVO{}, nil
+	}
+	rows, err := s.inter.ListCompanions(ctx, uid)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*CompanionVO, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, &CompanionVO{
+			ID: r.UID, Nickname: r.Nickname, AvatarURL: r.AvatarURL, Since: r.Since,
+		})
+	}
+	return out, nil
+}
+
 // normalizeDate 归一日期字符串：兼容 "2006-01-02" 与 parseTime 扫描出的
 // RFC3339 全格式（DATE 列经 database/sql 转 string 会带时间与时区）。
 func normalizeDate(d string) string {

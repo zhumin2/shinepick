@@ -5,7 +5,9 @@ import '../../features/auth/auth_controller.dart';
 import '../../features/auth/login_page.dart';
 import '../../features/settings/settings_page.dart';
 import '../../features/shell/shell_page.dart';
+import '../../features/social/companions_page.dart';
 import '../../features/social/notifications_page.dart';
+import '../../features/profile/my_posts_page.dart';
 import '../../features/profile/profile_page.dart';
 import '../../features/profile/user_profile_page.dart';
 
@@ -48,6 +50,16 @@ class AppRouter {
         GoRoute(
           path: '/user/:id',
           builder: (context, state) => UserProfilePage(
+            userId: int.parse(state.pathParameters['id']!),
+          ),
+        ),
+        GoRoute(
+          path: '/my-posts',
+          builder: (context, state) => const MyPostsPage(),
+        ),
+        GoRoute(
+          path: '/companions/:id',
+          builder: (context, state) => CompanionsPage(
             userId: int.parse(state.pathParameters['id']!),
           ),
         ),

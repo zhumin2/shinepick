@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../models/checkin.dart';
 import 'avatar.dart';
+import 'image_saver.dart';
 import 'image_viewer.dart';
 import 'emoji_text.dart';
 
@@ -106,11 +107,13 @@ class FeedCard extends StatelessWidget {
               child: c.imageUrls.length == 1
                   ? GestureDetector(
                       onTap: () => ImageViewerPage.open(context, c.imageUrls),
+                      onLongPress: () => saveImage(context, c.imageUrls.first),
                       child: _FullImage(url: c.imageUrls.first),
                     )
                   : _ImageGrid(
                       urls: c.imageUrls,
                       onImageTap: (i) => ImageViewerPage.open(context, c.imageUrls, initialIndex: i),
+                      onImageLongPress: (i) => saveImage(context, c.imageUrls[i]),
                     ),
             ),
           // 留言预览（我们的增强：作者图钉指定优先）
@@ -264,7 +267,8 @@ class _CoverGradient extends StatelessWidget {
 class _ImageGrid extends StatelessWidget {
   final List<String> urls;
   final void Function(int index)? onImageTap;
-  const _ImageGrid({required this.urls, this.onImageTap});
+  final void Function(int index)? onImageLongPress;
+  const _ImageGrid({required this.urls, this.onImageTap, this.onImageLongPress});
 
   @override
   Widget build(BuildContext context) {
@@ -276,6 +280,8 @@ class _ImageGrid extends StatelessWidget {
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (_, i) => GestureDetector(
           onTap: onImageTap != null ? () => onImageTap!(i) : null,
+          onLongPress:
+              onImageLongPress != null ? () => onImageLongPress!(i) : null,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: Image.network(
