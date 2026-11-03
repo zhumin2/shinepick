@@ -8,7 +8,7 @@
 #   health   健康检查（API /ping + DB 连通 + Redis 连通）
 #   logs     查看 API 日志（实时，Ctrl+C 退出）
 #   backup   备份数据库到 /opt/shinepick/backups/
-#   update   git pull + 重新部署前端 + 重启 API
+#   update   git pull + 前端 + API 二进制 + 重启
 #   help     显示帮助
 set -uo pipefail
 
@@ -175,6 +175,36 @@ do_update() {
     cp -r server/deploy/linux/web "$BASE/uploads/web"
     chown -R shinepick:shinepick "$BASE/uploads"
   fi
+  # 替换 API 二进制：优先本机 go 编译；无 go 则用仓库内预编译产物
+  info "更新 API 二进制..."
+  local BUILT=0
+  if command -v go >/dev/null 2>&1; then
+    if (cd server && CGO_ENABLED=0 go build -o "$BASE/shinepick-api.new" ./cmd/api); then
+      BUILT=1
+      ok "go 编译成功"
+    else
+      fail "go 编译失败，回退到仓库预编译二进制"
+    fi
+  fi
+  if [ "$BUILT" != "1" ]; then
+    local ARCH PRE
+    ARCH=$(uname -m)
+    case "$ARCH" in
+      x86_64)  PRE=shinepick-api-linux-amd64 ;;
+      aarch64) PRE=shinepick-api-linux-arm64 ;;
+      *) fail "不支持的架构 $ARCH（预编译二进制仅 amd64/arm64）"; return 1 ;;
+    esac
+    if [ ! -f "server/deploy/linux/bin/$PRE" ]; then
+      fail "仓库内无预编译二进制 server/deploy/linux/bin/$PRE；请在有 go 的机器上编译后上传"
+      return 1
+    fi
+    cp "server/deploy/linux/bin/$PRE" "$BASE/shinepick-api.new"
+    ok "使用仓库预编译二进制（$PRE）"
+  fi
+  # mv 替换 inode，运行中的旧进程不受影响（重启后切换到新二进制）
+  chmod 755 "$BASE/shinepick-api.new"
+  mv -f "$BASE/shinepick-api.new" "$BASE/shinepick-api"
+  chown shinepick:shinepick "$BASE/shinepick-api" 2>/dev/null || true
   # 重启 API
   systemctl restart shinepick-api
   sleep 2
@@ -193,7 +223,7 @@ do_help() {
   echo "  health    健康检查"
   echo "  logs      查看 API 实时日志"
   echo "  backup    备份数据库（保留最近 $KEEP_BACKUPS 份）"
-  echo "  update    从 git 更新代码并重新部署"
+  echo "  update    从 git 更新代码/前端/API 二进制并重启"
   echo "  help      显示本帮助"
 }
 
