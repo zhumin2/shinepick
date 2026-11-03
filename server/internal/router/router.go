@@ -23,6 +23,7 @@ import (
 	"shinepick/internal/module/upload"
 	"shinepick/internal/module/user"
 	"shinepick/internal/pkg/audit"
+	"shinepick/internal/pkg/httpx"
 	"shinepick/internal/pkg/jwt"
 	"shinepick/internal/pkg/sms"
 	"shinepick/internal/repository"
@@ -98,16 +99,17 @@ func Register(ctx context.Context, e *gin.Engine, db *gorm.DB, rdb *redis.Client
 
 	// 检查更新（公开）：代理 apkserver 的 /api/latest 并重写下载 URL 为公网地址。
 	// APK_LATEST_BASE 为空时返回空版本，客户端视为已是最新。
+	// 注意必须走 httpx.OK 统一信封——客户端 ApiResponse 只认 {code,data} 结构。
 	api.GET("/app/latest", func(c *gin.Context) {
 		missing := gin.H{"version": "", "url": ""}
 		if cfg.APKLatestBase == "" {
-			c.JSON(200, missing)
+			httpx.OK(c, missing)
 			return
 		}
 		client := &http.Client{Timeout: 3 * time.Second}
 		resp, err := client.Get(strings.TrimRight(cfg.APKLatestBase, "/") + "/api/latest")
 		if err != nil {
-			c.JSON(200, missing) // apkserver 不可用不阻塞客户端
+			httpx.OK(c, missing) // apkserver 不可用不阻塞客户端
 			return
 		}
 		defer resp.Body.Close()
@@ -117,10 +119,10 @@ func Register(ctx context.Context, e *gin.Engine, db *gorm.DB, rdb *redis.Client
 			URL     string `json:"url"` // apkserver 返回相对路径 /files/xxx
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&latest); err != nil || !latest.Found {
-			c.JSON(200, missing)
+			httpx.OK(c, missing)
 			return
 		}
-		c.JSON(200, gin.H{
+		httpx.OK(c, gin.H{
 			"version": latest.Version,
 			"url":     strings.TrimRight(cfg.APKLatestBase, "/") + latest.URL,
 		})
