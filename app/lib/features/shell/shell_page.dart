@@ -52,22 +52,41 @@ class _ShellPageState extends State<ShellPage> {
   @override
   Widget build(BuildContext context) {
     final unread = context.watch<SocialController>().unread;
+    final stack = Stack(
+      children: [
+        IndexedStack(
+          index: _index,
+          children: const [
+            HomePage(embedded: true),
+            DiscoverPage(),
+            GardenPage(),
+            ProfilePage(embedded: true),
+          ],
+        ),
+        if (_celebrating) const SuccessOverlay(),
+      ],
+    );
+    // 宽屏（Web 桌面/平板横屏 >900px）：内容居中限宽成手机栏，
+    // 底栏与打卡钮保持全宽。阈值 900 避开 800x600 的 widget 测试窗口。
+    final wide = MediaQuery.sizeOf(context).width > 900;
     return Scaffold(
       backgroundColor: AppTheme.bg,
-      body: Stack(
-        children: [
-          IndexedStack(
-            index: _index,
-            children: const [
-              HomePage(embedded: true),
-              DiscoverPage(),
-              GardenPage(),
-              ProfilePage(embedded: true),
-            ],
-          ),
-          if (_celebrating) const SuccessOverlay(),
-        ],
-      ),
+      body: wide
+          ? Container(
+              alignment: Alignment.topCenter,
+              decoration: const BoxDecoration(
+                color: AppTheme.bg,
+                border: Border(
+                  left: BorderSide(color: AppTheme.divider),
+                  right: BorderSide(color: AppTheme.divider),
+                ),
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: stack,
+              ),
+            )
+          : stack,
       // 中央凸起打卡钮（原型 tab-btn：琥珀圆 + 白描边 + 上浮）
       floatingActionButton: FloatingActionButton(
         onPressed: _openCheckin,

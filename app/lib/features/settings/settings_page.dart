@@ -1,7 +1,12 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/network/api_config.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/toast.dart';
 import '../../shared/models/checkin.dart';
@@ -19,7 +24,56 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   bool _nightDnd = false;
+  bool _checkingUpdate = false;
   List<BlockedUser> _blocked = [];
+
+  /// 检查更新：GET /app/latest（代理 apkserver，按文件名自动探测最新包）。
+  /// 服务端未配置或不可用时返回空版本 → 视为已是最新。
+  Future<void> _checkUpdate() async {
+    if (_checkingUpdate) return;
+    setState(() => _checkingUpdate = true);
+    try {
+      final data = await context.read<AuthController>().api
+          .get<Map<String, dynamic>>(
+        '/app/latest',
+        parser: (d) => Map<String, dynamic>.from(d as Map),
+      );
+      final remote = (data['version'] as String? ?? '').trim();
+      final url = data['url'] as String? ?? '';
+      if (!mounted) return;
+      if (remote.isEmpty ||
+          ApiConfig.compareVersions(remote, ApiConfig.appVersion) <= 0) {
+        Toast.show(context, '已是最新版本');
+        return;
+      }
+      final go = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text('发现新版本 $remote'),
+          content: Text('当前版本 ${ApiConfig.appVersion.isEmpty ? "内测版" : ApiConfig.appVersion}，'
+              '将跳转浏览器下载安装包。'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('以后再说')),
+            FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('立即更新')),
+          ],
+        ),
+      );
+      if (go == true && mounted && url.isNotEmpty) {
+        final uri = Uri.tryParse(url);
+        if (uri != null) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      }
+    } catch (_) {
+      if (mounted) Toast.show(context, '检查更新失败，请稍后重试');
+    } finally {
+      if (mounted) setState(() => _checkingUpdate = false);
+    }
+  }
 
   @override
   void initState() {
@@ -234,6 +288,30 @@ class _SettingsPageState extends State<SettingsPage> {
                       size: 18, color: AppTheme.textSub),
                   onTap: _blocked.isEmpty ? null : _manageBlocked,
                 ),
+                // 检查更新仅 Android 显示（Web 用浏览器无此需求；桌面端未分发）
+                if (!kIsWeb && Platform.isAndroid) ...[
+                  const Divider(height: 1, indent: 16, color: AppTheme.divider),
+                  ListTile(
+                    title: const Text('检查更新',
+                        style: TextStyle(
+                            fontSize: 15, color: AppTheme.textMain)),
+                    subtitle: Text(
+                        ApiConfig.appVersion.isEmpty
+                            ? '内测版'
+                            : '当前版本 ${ApiConfig.appVersion}',
+                        style: const TextStyle(
+                            fontSize: 12, color: AppTheme.textSub)),
+                    trailing: _checkingUpdate
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: AppTheme.primary))
+                        : const Icon(Icons.chevron_right,
+                            size: 18, color: AppTheme.textSub),
+                    onTap: _checkingUpdate ? null : _checkUpdate,
+                  ),
+                ],
               ],
             ),
           ),

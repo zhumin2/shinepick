@@ -214,6 +214,42 @@ extension on Checkin {
   }
 }
 
+/// 品类渐变色与图标（Feed 封面/分享卡等共用）。
+(Color, Color, IconData) categoryVisual(CheckinCategory category) {
+  return switch (category) {
+    CheckinCategory.sport => (
+        const Color(0xFFF5D8A8),
+        const Color(0xFFF0C98A),
+        Icons.directions_run_outlined,
+      ),
+    CheckinCategory.read => (
+        const Color(0xFFD8E0D0),
+        const Color(0xFFB8C8A8),
+        Icons.menu_book_outlined,
+      ),
+    CheckinCategory.travel => (
+        const Color(0xFFC8DCE8),
+        const Color(0xFFA8C5DA),
+        Icons.flight_takeoff_outlined,
+      ),
+    CheckinCategory.social => (
+        const Color(0xFFF0D0CC),
+        const Color(0xFFE8B5B0),
+        Icons.groups_outlined,
+      ),
+    CheckinCategory.pet => (
+        const Color(0xFFF0E4CC),
+        const Color(0xFFE8D4A8),
+        Icons.pets_outlined,
+      ),
+    _ => (
+        const Color(0xFFE4DCF0),
+        const Color(0xFFB8A6D9),
+        Icons.auto_awesome_outlined,
+      ),
+  };
+}
+
 /// 品类渐变封面（原型 .cov-*：无图打卡也有视觉锚）。
 class _CoverGradient extends StatelessWidget {
   final CheckinCategory category;
@@ -221,38 +257,7 @@ class _CoverGradient extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (c1, c2, icon) = switch (category) {
-      CheckinCategory.sport => (
-          const Color(0xFFF5D8A8),
-          const Color(0xFFF0C98A),
-          Icons.directions_run_outlined
-        ),
-      CheckinCategory.read => (
-          const Color(0xFFD8E0D0),
-          const Color(0xFFB8C8A8),
-          Icons.menu_book_outlined
-        ),
-      CheckinCategory.travel => (
-          const Color(0xFFC8DCE8),
-          const Color(0xFFA8C5DA),
-          Icons.flight_takeoff_outlined
-        ),
-      CheckinCategory.social => (
-          const Color(0xFFF0D0CC),
-          const Color(0xFFE8B5B0),
-          Icons.groups_outlined
-        ),
-      CheckinCategory.pet => (
-          const Color(0xFFF0E4CC),
-          const Color(0xFFE8D4A8),
-          Icons.pets_outlined
-        ),
-      _ => (
-          const Color(0xFFE4DCF0),
-          const Color(0xFFB8A6D9),
-          Icons.auto_awesome_outlined
-        ),
-    };
+    final (Color c1, Color c2, IconData icon) = categoryVisual(category);
     return Container(
       height: 120,
       decoration: BoxDecoration(

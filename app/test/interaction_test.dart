@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 
+import 'package:shinepick/core/network/api_config.dart';
 import 'package:shinepick/core/theme/app_theme.dart';
 import 'package:shinepick/features/checkin/owner_actions_sheet.dart';
 import 'package:shinepick/shared/models/checkin.dart';
@@ -170,6 +171,20 @@ void main() {
       await tester.tap(find.text('同路人'));
       await tester.pumpAndSettle();
       expect(log.where((e) => e.startsWith('vis:')), isEmpty);
+    });
+  });
+
+  group('版本比较（检查更新）', () {
+    test('语义化版本逐段比较', () {
+      const cmp = ApiConfig.compareVersions;
+      expect(cmp('0.4.0', '0.3.0'), greaterThan(0));
+      expect(cmp('0.4.0', '0.4.0'), 0);
+      expect(cmp('0.3.9', '0.4.0'), lessThan(0));
+      expect(cmp('1.0.0', '0.9.9'), greaterThan(0));
+      expect(cmp('0.4.10', '0.4.9'), greaterThan(0));
+      // 段数不齐补 0、非数字按 0
+      expect(cmp('0.4', '0.4.0'), 0);
+      expect(cmp('0.4.0', ''), greaterThan(0));
     });
   });
 

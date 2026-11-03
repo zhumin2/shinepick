@@ -7,6 +7,10 @@ import 'image_saver_io.dart'
     if (dart.library.js_interop) 'image_saver_web.dart' as impl;
 import 'toast.dart';
 
+export 'image_saver_io.dart'
+    if (dart.library.js_interop) 'image_saver_web.dart'
+    show saveImageBytes;
+
 /// 保存网络图片：
 /// - Android/iOS 存入系统相册「拾光」相簿（gal，Android 10+ 走 MediaStore 免权限）
 /// - Web 触发浏览器下载（同源资源 <a download>）

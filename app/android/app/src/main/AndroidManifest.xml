@@ -3,6 +3,17 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- 图片保存到相册：Android 10+ 走 MediaStore 免权限；旧版本需写存储权限 -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>
+    <!-- url_launcher 打开 APK 下载链接（Android 11+ 包可见性声明） -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="http"/>
+        </intent>
+    </queries>
     <application
         android:label="拾光"
         android:name="${applicationName}"

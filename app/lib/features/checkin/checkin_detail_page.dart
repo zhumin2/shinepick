@@ -1,4 +1,7 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -8,6 +11,7 @@ import '../../shared/models/checkin.dart';
 import '../../shared/widgets/avatar.dart';
 import '../../shared/widgets/emoji_text.dart';
 import '../../shared/widgets/feed_card.dart';
+import '../../shared/widgets/image_saver.dart';
 import '../../shared/widgets/toast.dart';
 import '../auth/auth_controller.dart';
 import '../checkin/checkin_controller.dart';
@@ -27,9 +31,11 @@ class _CheckinDetailPageState extends State<CheckinDetailPage> {
   Checkin? _checkin;
   Map<String, dynamic>? _author;
   final List<CommentVO> _comments = [];
+  final GlobalKey _shareKey = GlobalKey();
   int _nextCursor = 0;
   bool _loading = true;
   bool _loadingMore = false;
+  bool _sharing = false;
   String? _error;
 
   @override
@@ -144,6 +150,28 @@ class _CheckinDetailPageState extends State<CheckinDetailPage> {
     }
   }
 
+  /// 生成分享卡片图片并保存（Android/iOS 存相册，Web 触发下载）。
+  /// 卡片为离屏 RepaintBoundary，纯本地渲染（不用网络图，避免截图时未加载）。
+  Future<void> _share() async {
+    final c = _checkin;
+    if (c == null || _sharing || _shareKey.currentContext == null) return;
+    setState(() => _sharing = true);
+    Toast.show(context, '正在生成分享卡片…');
+    try {
+      final boundary =
+          _shareKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final bytes = byteData!.buffer.asUint8List();
+      final message = await saveImageBytes(bytes, 'shinepick-${c.id}.png', '');
+      if (mounted) Toast.show(context, message);
+    } catch (_) {
+      if (mounted) Toast.show(context, '生成失败，请重试');
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authorName = _author?['nickname'] as String? ?? '';
@@ -157,8 +185,35 @@ class _CheckinDetailPageState extends State<CheckinDetailPage> {
               context.canPop() ? context.pop() : context.go('/home'),
         ),
         title: const Text('拾光详情'),
+        actions: [
+          IconButton(
+            icon: _sharing
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: AppTheme.primary))
+                : const Icon(Icons.ios_share_outlined, size: 20),
+            tooltip: '保存分享卡片',
+            onPressed: _share,
+          ),
+        ],
       ),
-      body: _buildBody(authorName),
+      body: Stack(
+        children: [
+          _buildBody(authorName),
+          // 离屏分享卡：仅参与布局供截图，不显示
+          Offstage(
+            child: RepaintBoundary(
+              key: _shareKey,
+              child: _ShareCard(
+                checkin: _checkin,
+                nickname: authorName,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -270,6 +325,122 @@ class _CommentsBlock extends StatelessWidget {
                 ),
               ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// 分享卡片：品类渐变头 + 内容 + 落款，375 逻辑宽，截图用纯本地渲染。
+class _ShareCard extends StatelessWidget {
+  final Checkin? checkin;
+  final String nickname;
+
+  const _ShareCard({required this.checkin, required this.nickname});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = checkin;
+    if (c == null) return const SizedBox(width: 375, height: 200);
+    final cat = c.categoryEnum ?? CheckinCategory.sport;
+    final (Color c1, Color c2, IconData icon) = categoryVisual(cat);
+    final created = c.createdAt;
+    final dateLine = created == null
+        ? c.checkinDate
+        : '${created.year} 年 ${created.month} 月 ${created.day} 日 · '
+            '${'一二三四五六日'[created.weekday - 1]}';
+    return Container(
+      width: 375,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.divider),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 品类渐变头
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [c1, c2],
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, size: 26, color: Colors.white),
+                const SizedBox(width: 10),
+                Text(cat.label,
+                    style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white)),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+            child: EmojiText(c.content,
+                maxLines: 10,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontSize: 18,
+                    height: 1.6,
+                    color: AppTheme.textMain,
+                    fontWeight: FontWeight.w500)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+            child: Text(dateLine,
+                style:
+                    const TextStyle(fontSize: 12, color: AppTheme.textFaint)),
+          ),
+          const Divider(height: 1, indent: 24, endIndent: 24),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
+            child: Row(
+              children: [
+                // 本地首字头像：避免网络图截图时未加载
+                Container(
+                  width: 30,
+                  height: 30,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppTheme.sand,
+                  ),
+                  child: Text(
+                    nickname.isNotEmpty ? nickname.characters.first : '拾',
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primaryDark),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    nickname.isEmpty ? '拾光用户' : '$nickname 的拾光',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 13, color: AppTheme.textMain),
+                  ),
+                ),
+                const Text('拾光 ShinePick',
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primaryDark)),
+              ],
+            ),
+          ),
         ],
       ),
     );

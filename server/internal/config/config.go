@@ -22,6 +22,7 @@ type Config struct {
 	AuditType      string // mock / remote（remote=独立 Python 审核服务）
 	AuditRemoteURL string
 	AdminToken     string // 运营接口令牌（X-Admin-Token 头；生产务必改掉默认值）
+	APKLatestBase  string // apkserver 公网基地址（如 http://8.134.144.35:8082）；空=检查更新不可用
 }
 
 func Load() *Config {
@@ -44,6 +45,7 @@ func Load() *Config {
 		AuditType:      getenv("AUDIT_TYPE", "mock"),
 		AuditRemoteURL: getenv("AUDIT_REMOTE_URL", ""),
 		AdminToken:     getenv("ADMIN_TOKEN", "dev-admin-token"),
+		APKLatestBase:  getenv("APK_LATEST_BASE", ""),
 	}
 }
 

@@ -92,6 +92,7 @@ shinepick/
 | POST | `/auth/login` | 手机号+验证码登录，返回双 token |
 | POST | `/auth/refresh` | refresh 换 access（轮换） |
 | GET | `/ping` | 健康检查（在根，不在 /api/v1） |
+| GET | `/app/latest` | 检查更新：代理 apkserver `/api/latest`（APK_LATEST_BASE env 配置公网基地址），返回 `{version,url}`；apkserver 按文件名 `shinepick-server-vX.Y.Z-android.apk` 自动探测最高版本，上传即生效 |
 
 **登录态（middleware.Auth）**
 | 方法 | 路径 | 说明 |
@@ -145,7 +146,7 @@ shinepick/
 
 ### 4.4 环境变量（`internal/config/config.go`）
 
-`APP_ENV PORT DB_DSN REDIS_ADDR REDIS_PASSWORD JWT_SECRET REFRESH_TTL UPLOAD_DIR PUBLIC_BASE_URL ADMIN_TOKEN SMS_TYPE SMS_SECRET_ID SMS_SECRET_KEY SMS_APP_ID SMS_SIGN_NAME SMS_TEMPLATE_ID AUDIT_TYPE AUDIT_REMOTE_URL`
+`APP_ENV PORT DB_DSN REDIS_ADDR REDIS_PASSWORD JWT_SECRET REFRESH_TTL UPLOAD_DIR PUBLIC_BASE_URL ADMIN_TOKEN SMS_TYPE SMS_SECRET_ID SMS_SECRET_KEY SMS_APP_ID SMS_SIGN_NAME SMS_TEMPLATE_ID AUDIT_TYPE AUDIT_REMOTE_URL APK_LATEST_BASE`
 
 ---
 

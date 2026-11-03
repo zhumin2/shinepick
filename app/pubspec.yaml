@@ -1,7 +1,7 @@
 name: shinepick
 description: 拾光 ShinePick - 记录正向日常的社交 App
 publish_to: 'none'
-version: 0.1.0+1
+version: 0.4.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -24,6 +24,8 @@ dependencies:
   gal: ^2.3.0
   # Web 端浏览器 API（图片下载）
   web: ^1.1.0
+  # 检查更新：打开下载链接（系统浏览器）
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:
