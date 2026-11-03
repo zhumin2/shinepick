@@ -9,6 +9,7 @@ import '../../shared/widgets/feed_card.dart';
 import '../../shared/widgets/toast.dart';
 import '../auth/auth_controller.dart';
 import '../checkin/checkin_controller.dart';
+import '../checkin/owner_actions_sheet.dart';
 import '../comment/comment_sheet.dart';
 
 /// 我的发帖（全部打卡）：GET /users/{uid}/checkins 自己视角=全部可见范围，
@@ -142,6 +143,18 @@ class _MyPostsPageState extends State<MyPostsPage> {
     }
   }
 
+  /// 长按自己的打卡：管理可见范围 / 删除（本地列表不走 Controller，变更后刷新）。
+  Future<void> _ownerActions(Checkin c) async {
+    final changed = await showOwnerActions(
+      context,
+      c,
+      onVisibility: (v) =>
+          context.read<CheckinController>().setVisibility(c.id, v),
+      onDelete: () => context.read<CheckinController>().delete(c.id),
+    );
+    if (changed && mounted) _reload();
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthController>();
@@ -228,11 +241,15 @@ class _MyPostsPageState extends State<MyPostsPage> {
                     );
             }
             final c = _items[i];
-            return FeedCard(
-              checkin: c,
-              nickname: auth.user?.nickname ?? '我',
-              avatarUrl: auth.user?.avatarUrl,
-              onAction: (a) => _onAction(a, c),
+            return GestureDetector(
+              // 长按自己的打卡：改可见范围 / 删除
+              onLongPress: () => _ownerActions(c),
+              child: FeedCard(
+                checkin: c,
+                nickname: auth.user?.nickname ?? '我',
+                avatarUrl: auth.user?.avatarUrl,
+                onAction: (a) => _onAction(a, c),
+              ),
             );
           },
         ),

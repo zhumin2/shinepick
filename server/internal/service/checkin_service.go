@@ -90,11 +90,17 @@ type CheckinService struct {
 	aud   audit.Auditor
 
 	onPublished func(ctx context.Context, uid, checkinID int64) // 发布后回调（S7 徽章评估）
+	onModified  func(ctx context.Context)                        // 删除/改可见范围后回调（今日微光缓存重建）
 }
 
 // SetOnPublished 注册发布后回调（徽章评估，S7）。
 func (s *CheckinService) SetOnPublished(f func(ctx context.Context, uid, checkinID int64)) {
 	s.onPublished = f
+}
+
+// SetOnModified 注册删除/隐藏后回调（router 里接今日微光重建，避免公开流残留已隐藏内容）。
+func (s *CheckinService) SetOnModified(f func(ctx context.Context)) {
+	s.onModified = f
 }
 
 func NewCheckinService(
@@ -297,7 +303,27 @@ func (s *CheckinService) Detail(ctx context.Context, viewerUID, id int64) (*Chec
 
 // Delete 软删除自己的打卡（幂等：已删返回 NotFound 语义由 handler 映射）。
 func (s *CheckinService) Delete(ctx context.Context, uid, id int64) error {
-	return s.repo.SoftDelete(ctx, id, uid)
+	if err := s.repo.SoftDelete(ctx, id, uid); err != nil {
+		return err
+	}
+	if s.onModified != nil {
+		s.onModified(ctx)
+	}
+	return nil
+}
+
+// SetVisibility 作者调整可见范围（1仅自己 2同路人 3小树洞）。
+func (s *CheckinService) SetVisibility(ctx context.Context, uid, id int64, visibility int8) error {
+	if visibility < 1 || visibility > 3 {
+		return &ValidationError{msg: "可见范围取值不合法"}
+	}
+	if err := s.repo.SetVisibility(ctx, id, uid, visibility); err != nil {
+		return err
+	}
+	if s.onModified != nil {
+		s.onModified(ctx)
+	}
+	return nil
 }
 
 func toCheckinVO(c *model.Checkin) *CheckinVO {

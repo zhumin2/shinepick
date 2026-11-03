@@ -27,6 +27,7 @@ func (h *Handler) Register(r *gin.RouterGroup) {
 	g := r.Group("/checkins")
 	g.POST("", h.Create)
 	g.GET("/:id", h.Detail)
+	g.PATCH("/:id", h.UpdateVisibility)
 	g.DELETE("/:id", h.Delete)
 }
 
@@ -86,6 +87,27 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 	httpx.OK(c, gin.H{"deleted": true})
+}
+
+// UpdateVisibility PATCH /checkins/:id —— 作者调整可见范围（隐藏/公开）。
+func (h *Handler) UpdateVisibility(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		httpx.FailMsg(c, code.ErrBadRequest, "打卡 id 不合法")
+		return
+	}
+	var req struct {
+		Visibility int8 `json:"visibility"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.FailMsg(c, code.ErrBadRequest, "请求体格式不正确")
+		return
+	}
+	if err := h.svc.SetVisibility(c, c.GetInt64("uid"), id, req.Visibility); err != nil {
+		h.fail(c, err)
+		return
+	}
+	httpx.OK(c, gin.H{"visibility": req.Visibility})
 }
 
 // ListByUser GET /users/:id/checkins —— 某人的打卡（自己=全部，他人=同路人可见）。

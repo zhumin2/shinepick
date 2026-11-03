@@ -3,6 +3,7 @@ package router
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -72,6 +73,11 @@ func Register(ctx context.Context, e *gin.Engine, db *gorm.DB, rdb *redis.Client
 	feedSvc := service.NewFeedService(checkinRepo, rdb)
 	feed.NewHandler(feedSvc, interSvc, socialSvc).Register(authed)
 	service.StartDailyCron(ctx, feedSvc)
+	// 打卡被删除/隐藏后重建今日微光缓存，避免公开流残留不可见内容
+	checkinSvc.SetOnModified(func(ctx context.Context) {
+		today := time.Now().In(service.CstZone()).Format("2006-01-02")
+		_ = feedSvc.RebuildDailySelected(ctx, today)
+	})
 
 	// 运营接口（S8-01/05：精选管理 + 数据面板，X-Admin-Token 鉴权）
 	adminSvc := service.NewAdminService(db, feedSvc)

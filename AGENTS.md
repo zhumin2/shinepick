@@ -101,7 +101,8 @@ shinepick/
 | GET | `/users/:id` | **他人公开主页**（无手机号/未成年标记；封禁返回 5001） |
 | GET | `/users/:id/checkins` | 某人的打卡列表（自己=全部，他人=同路人可见），游标分页 |
 | GET | `/users/:id/companions` | 某人的同路人列表（id/nickname/avatar_url/since，排除自己与封禁号） |
-| POST/GET/DELETE | `/checkins` `/checkins/:id` | 发布/列表/详情/软删（含可见范围 1仅自己 2同路人 3小树洞） |
+| POST/GET/DELETE | `/checkins` `/checkins/:id` | 发布/详情/软删（幂等，重复删 5001） |
+| PATCH | `/checkins/:id` | 作者改可见范围 `{visibility: 1\|2\|3}`（隐藏/公开）；删除与改隐藏都会触发今日微光缓存重建 |
 | POST/DELETE | `/checkins/:id/reactions` | 点亮(1)/拥抱(2)/同路(3)，幂等；同路建关系 |
 | POST/GET | `/checkins/:id/comments` | 留言（≤80 字） |
 | DELETE | `/comments/:id` | 删留言（本人或作者） |

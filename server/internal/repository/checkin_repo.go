@@ -75,6 +75,20 @@ func (r *CheckinRepo) SoftDelete(ctx context.Context, id, uid int64) error {
 	return nil
 }
 
+// SetVisibility 作者调整可见范围（1仅自己 2同路人 3小树洞），仅本人有效打卡。
+func (r *CheckinRepo) SetVisibility(ctx context.Context, id, uid int64, v int8) error {
+	res := r.db.WithContext(ctx).Model(&model.Checkin{}).
+		Where("id = ? AND user_id = ? AND status = 0", id, uid).
+		Update("visibility", v)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
 // TreeByUser 树进度（不存在返回零值+false）。
 func (r *CheckinRepo) TreeByUser(ctx context.Context, uid int64) (*model.TreeProgress, bool, error) {
 	var t model.TreeProgress

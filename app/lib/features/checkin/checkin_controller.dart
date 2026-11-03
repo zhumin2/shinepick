@@ -157,6 +157,16 @@ class CheckinController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 调整自己打卡的可见范围（1仅自己 2同路人 3小树洞）。
+  Future<void> setVisibility(int id, int visibility) async {
+    await auth.api.patch('/checkins/$id', data: {'visibility': visibility});
+    final idx = _items.indexWhere((c) => c.id == id);
+    if (idx >= 0) {
+      _items[idx] = _items[idx].copyWith(visibility: visibility);
+    }
+    notifyListeners();
+  }
+
   /// 拉取首页 Feed（GET /feed）。
   /// 弱网/断网时回退到上次缓存（S4-06），页面提示"展示最近内容"。
   Future<void> loadFeed() async {

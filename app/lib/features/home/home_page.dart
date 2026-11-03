@@ -10,6 +10,7 @@ import '../../shared/widgets/feed_card.dart';
 import '../../shared/widgets/toast.dart';
 import '../auth/auth_controller.dart';
 import '../checkin/checkin_controller.dart';
+import '../checkin/owner_actions_sheet.dart';
 import '../comment/comment_sheet.dart';
 import '../social/social_controller.dart';
 
@@ -241,16 +242,32 @@ class _HomePageState extends State<HomePage> {
               )
             else
               for (final c in checkin.items)
-                FeedCard(
-                  checkin: c,
-                  nickname: nickname,
-                  avatarUrl: auth.user?.avatarUrl,
-                  onAction: (a) =>
-                      _onAction(a, checkinId: c.id, ownerId: c.userId),
+                GestureDetector(
+                  // 长按自己的打卡：改可见范围 / 删除
+                  onLongPress: () => _ownerActions(c),
+                  child: FeedCard(
+                    checkin: c,
+                    nickname: nickname,
+                    avatarUrl: auth.user?.avatarUrl,
+                    onAction: (a) =>
+                        _onAction(a, checkinId: c.id, ownerId: c.userId),
+                  ),
                 ),
           ],
         ),
       ),
+    );
+  }
+
+  /// 长按自己的打卡：管理可见范围 / 删除（弹层内部走 CheckinController，
+  /// 自身列表会自动更新）。
+  Future<void> _ownerActions(Checkin c) async {
+    await showOwnerActions(
+      context,
+      c,
+      onVisibility: (v) =>
+          context.read<CheckinController>().setVisibility(c.id, v),
+      onDelete: () => context.read<CheckinController>().delete(c.id),
     );
   }
 

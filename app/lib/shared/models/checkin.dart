@@ -150,7 +150,8 @@ class Checkin {
           {List<int>? myReactions,
           List<CommentVO>? previewComments,
           String? customName,
-          List<String>? moods}) =>
+          List<String>? moods,
+          int? visibility}) =>
       Checkin(
         id: id,
         userId: userId,
@@ -158,7 +159,7 @@ class Checkin {
         customName: customName ?? this.customName,
         content: content,
         imageUrls: imageUrls,
-        visibility: visibility,
+        visibility: visibility ?? this.visibility,
         checkinDate: checkinDate,
         createdAt: createdAt,
         myReactions: myReactions ?? this.myReactions,

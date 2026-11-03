@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 
 import 'package:shinepick/core/theme/app_theme.dart';
+import 'package:shinepick/features/checkin/owner_actions_sheet.dart';
 import 'package:shinepick/shared/models/checkin.dart';
 import 'package:shinepick/shared/widgets/feed_card.dart';
 
@@ -97,6 +98,78 @@ void main() {
       expect(parsed!.isUtc, isFalse);
       expect(parsed.hour, 12, reason: 'server=$serverStr');
       expect(parsed.day, localNoon.day);
+    });
+  });
+
+  group('作者操作弹层', () {
+    const c = Checkin(
+      id: 9,
+      userId: 2,
+      category: 1,
+      content: '今天跑了 3 公里',
+      checkinDate: '2026-10-30',
+      visibility: 2,
+    );
+
+    Future<void> open(WidgetTester tester, List<String> log) async {
+      await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: Builder(builder: (ctx) {
+            return Center(
+              child: ElevatedButton(
+                onPressed: () async {
+                  await showOwnerActions(
+                    ctx,
+                    c,
+                    onVisibility: (v) async => log.add('vis:$v'),
+                    onDelete: () async => log.add('delete'),
+                  ).then((changed) => log.add('changed=$changed'));
+                },
+                child: const Text('open'),
+              ),
+            );
+          }),
+        ),
+      ));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('点击可见范围立即生效并关闭', (tester) async {
+      final log = <String>[];
+      await open(tester, log);
+      await tester.tap(find.text('仅自己'));
+      await tester.pumpAndSettle();
+      expect(log, contains('vis:1'));
+      expect(log, contains('changed=true'));
+      expect(log, isNot(contains('delete')));
+    });
+
+    testWidgets('删除需二次确认', (tester) async {
+      final log = <String>[];
+      await open(tester, log);
+      await tester.tap(find.text('删除打卡'));
+      await tester.pumpAndSettle();
+      expect(log, isNot(contains('delete')), reason: '确认框出现前不应删除');
+      await tester.tap(find.text('取消'));
+      await tester.pumpAndSettle();
+      expect(log, isNot(contains('delete')));
+      // 再走一次，这次确认
+      await tester.tap(find.text('删除打卡'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('删除'));
+      await tester.pumpAndSettle();
+      expect(log, contains('delete'));
+      expect(log, contains('changed=true'));
+    });
+
+    testWidgets('点击当前可见范围无回调', (tester) async {
+      final log = <String>[];
+      await open(tester, log);
+      await tester.tap(find.text('同路人'));
+      await tester.pumpAndSettle();
+      expect(log.where((e) => e.startsWith('vis:')), isEmpty);
     });
   });
 
