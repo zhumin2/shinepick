@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -25,6 +27,43 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  /// 每日暖句：随机展示一条，下拉刷新换一条。
+  static const _dailyQuotes = [
+    '不必是大事，跑 3 公里也算。',
+    '今天的一小步，是树上的一颗光点。',
+    '慢慢来，比较快。',
+    '读几页书也算数，哪怕只有一页。',
+    '把今天的一件小事拾起来，就很好。',
+    '微小但持续，胜过猛烈却短暂。',
+    '记录美好的瞬间，它们会发光。',
+    '休息也是一种认真生活。',
+    '天气好的话，去外面走走吧。',
+    '和朋友聊十分钟，也是一种充电。',
+    '给毛孩子梳梳毛，也是治愈。',
+    '今天的你，已经在努力了。',
+    '光点会累积，日子会发亮。',
+    '做点让自己眼睛发亮的事。',
+    '不用完美的打卡，真实的就好。',
+    '喝杯热水，抬头看看天。',
+    '今晚早点睡，明天见。',
+    '生活不在别处，就在此刻。',
+  ];
+  late String _quote =
+      _dailyQuotes[DateTime.now().millisecondsSinceEpoch % _dailyQuotes.length];
+
+  void _rerollQuote() {
+    final next = _dailyQuotes[Random().nextInt(_dailyQuotes.length)];
+    if (next != _quote || _dailyQuotes.length == 1) {
+      _quote = next;
+    } else {
+      // 换一条不重复的（长度 >1 时必然成功）
+      _quote = _dailyQuotes[(Random().nextInt(_dailyQuotes.length - 1) +
+              _dailyQuotes.indexOf(next) +
+              1) %
+          _dailyQuotes.length];
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -36,6 +75,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _refreshAll() async {
+    _rerollQuote();
     final c = context.read<CheckinController>();
     await c.load();
     await c.loadFeed();
@@ -158,8 +198,8 @@ class _HomePageState extends State<HomePage> {
                     fontWeight: FontWeight.w700,
                     color: AppTheme.textMain)),
             const SizedBox(height: 4),
-            const Text('不必是大事，跑 3 公里也算。',
-                style: TextStyle(fontSize: 13, color: AppTheme.textSub)),
+            Text(_quote,
+                style: const TextStyle(fontSize: 13, color: AppTheme.textSub)),
             const SizedBox(height: 16),
             _TodayCard(
               todayCount: checkin.todayCount,
