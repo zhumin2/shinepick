@@ -244,6 +244,25 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
+              // 同路人动态分页：还有更多时显示加载按钮
+              if (checkin.companionNextCursor > 0)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Center(
+                    child: checkin.companionLoadingMore
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: AppTheme.primary))
+                        : TextButton(
+                            onPressed: checkin.loadMoreCompanionFeed,
+                            child: const Text('加载更多同路人动态',
+                                style: TextStyle(
+                                    fontSize: 12, color: AppTheme.textSub)),
+                          ),
+                  ),
+                ),
               const SizedBox(height: 8),
             ],
             // 我的拾光

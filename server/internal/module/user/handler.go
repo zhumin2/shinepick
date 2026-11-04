@@ -24,8 +24,19 @@ func (h *Handler) Register(r *gin.RouterGroup) {
 	g.GET("/me", h.Profile)
 	g.PATCH("/me", h.UpdateProfile)
 	g.POST("/me/avatar", h.UploadAvatar)
+	g.GET("/me/weekly", h.Weekly)
 	g.GET("/:id", h.OtherProfile)
 	g.GET("/:id/companions", h.Companions)
+}
+
+// Weekly GET /users/me/weekly —— 拾光周报（周一至周日聚合）。
+func (h *Handler) Weekly(c *gin.Context) {
+	vo, err := h.svc.WeeklyReport(c, c.GetInt64("uid"))
+	if err != nil {
+		httpx.Fail(c, code.ErrInternal)
+		return
+	}
+	httpx.OK(c, vo)
 }
 
 // Companions GET /users/:id/companions —— 同路人列表（公开信息）。

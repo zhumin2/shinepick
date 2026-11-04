@@ -11,6 +11,7 @@ import '../../features/social/notifications_page.dart';
 import '../../features/profile/my_posts_page.dart';
 import '../../features/profile/profile_page.dart';
 import '../../features/profile/user_profile_page.dart';
+import '../../features/profile/weekly_report_page.dart';
 
 /// 应用路由：未登录 → 登录页；已登录 → 首页。
 class AppRouter {
@@ -63,6 +64,10 @@ class AppRouter {
         GoRoute(
           path: '/my-posts',
           builder: (context, state) => const MyPostsPage(),
+        ),
+        GoRoute(
+          path: '/weekly',
+          builder: (context, state) => const WeeklyReportPage(),
         ),
         GoRoute(
           path: '/companions/:id',

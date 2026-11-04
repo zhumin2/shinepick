@@ -241,6 +241,93 @@ class FeedItem {
       };
 }
 
+/// 拾光周报（对齐后端 WeeklyReportVO）。
+class WeeklyReportVO {
+  final String startDate;
+  final String endDate;
+  final int count;
+  final int days;
+  final int streakDays;
+  final int lastCount;
+  final int delta;
+  final List<DailyPoint> daily;
+  final List<CategoryStat> categories;
+
+  const WeeklyReportVO({
+    required this.startDate,
+    required this.endDate,
+    required this.count,
+    required this.days,
+    required this.streakDays,
+    required this.lastCount,
+    required this.delta,
+    required this.daily,
+    required this.categories,
+  });
+
+  factory WeeklyReportVO.fromJson(Map<String, dynamic> json) => WeeklyReportVO(
+        startDate: json['start_date'] as String? ?? '',
+        endDate: json['end_date'] as String? ?? '',
+        count: (json['count'] as num?)?.toInt() ?? 0,
+        days: (json['days'] as num?)?.toInt() ?? 0,
+        streakDays: (json['streak_days'] as num?)?.toInt() ?? 0,
+        lastCount: (json['last_count'] as num?)?.toInt() ?? 0,
+        delta: (json['delta'] as num?)?.toInt() ?? 0,
+        daily: (json['daily'] as List<dynamic>? ?? const [])
+            .map((e) => DailyPoint.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList(),
+        categories: (json['categories'] as List<dynamic>? ?? const [])
+            .map((e) =>
+                CategoryStat.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList(),
+      );
+}
+
+/// 周报单日：日期 + 星期序号（1=周一）+ 次数 + 主品类（0=无）。
+class DailyPoint {
+  final String date;
+  final int weekday;
+  final int count;
+  final int category;
+
+  const DailyPoint({
+    required this.date,
+    required this.weekday,
+    required this.count,
+    required this.category,
+  });
+
+  factory DailyPoint.fromJson(Map<String, dynamic> json) => DailyPoint(
+        date: json['date'] as String? ?? '',
+        weekday: (json['weekday'] as num?)?.toInt() ?? 1,
+        count: (json['count'] as num?)?.toInt() ?? 0,
+        category: (json['category'] as num?)?.toInt() ?? 0,
+      );
+
+  CheckinCategory? get categoryEnum =>
+      category < 1 || category > 6 ? null : CheckinCategory.byCode(category);
+
+  /// 柱状图日标签：一 二 三 四 五 六 日
+  String get weekdayLabel => const ['一', '二', '三', '四', '五', '六', '日']
+      [(weekday - 1).clamp(0, 6)];
+}
+
+/// 品类分布项。
+class CategoryStat {
+  final int category;
+  final int count;
+
+  const CategoryStat({required this.category, required this.count});
+
+  factory CategoryStat.fromJson(Map<String, dynamic> json) => CategoryStat(
+        category: (json['category'] as num?)?.toInt() ?? 6,
+        count: (json['count'] as num?)?.toInt() ?? 0,
+      );
+
+  CheckinCategory get categoryEnum =>
+      CheckinCategory.byCode(category) ?? CheckinCategory.custom;
+}
+
 /// 小便签留言（对齐后端 CommentVO）。
 class CommentVO {
   final int id;

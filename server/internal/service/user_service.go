@@ -143,6 +143,126 @@ func (s *UserService) Companions(ctx context.Context, uid int64) ([]*CompanionVO
 	return out, nil
 }
 
+// DailyPoint 周报中的单日数据。
+type DailyPoint struct {
+	Date     string `json:"date"`    // YYYY-MM-DD
+	Weekday  int    `json:"weekday"` // 1=周一 ... 7=周日
+	Count    int    `json:"count"`
+	Category int8   `json:"category"` // 当天主品类（出现最多），0=当天无打卡
+}
+
+// CategoryStat 品类分布项。
+type CategoryStat struct {
+	Category int8 `json:"category"`
+	Count    int  `json:"count"`
+}
+
+// WeeklyReportVO 拾光周报（周一至周日，东八区）。
+type WeeklyReportVO struct {
+	StartDate  string         `json:"start_date"`
+	EndDate    string         `json:"end_date"`
+	Count      int            `json:"count"`       // 本周打卡次数
+	Days       int            `json:"days"`        // 本周有打卡的天数
+	StreakDays int            `json:"streak_days"` // 当前连续天数（非仅本周）
+	LastCount  int            `json:"last_count"`  // 上周打卡次数
+	Delta      int            `json:"delta"`       // 本周 - 上周
+	Daily      []DailyPoint   `json:"daily"`
+	Categories []CategoryStat `json:"categories"`
+}
+
+// WeeklyReport 本周拾光汇总：每日柱状、品类分布、与上周对比、连续天数。
+func (s *UserService) WeeklyReport(ctx context.Context, uid int64) (*WeeklyReportVO, error) {
+	now := time.Now().In(cstZone)
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, cstZone)
+	// 周一为一周起点：Weekday() 周日=0，换算为 0(周一)..6(周日)
+	offset := (int(now.Weekday()) + 6) % 7
+	monday := today.AddDate(0, 0, -offset)
+	sunday := monday.AddDate(0, 0, 6)
+	lastMonday := monday.AddDate(0, 0, -7)
+	lastSunday := monday.AddDate(0, 0, -1)
+
+	vo := &WeeklyReportVO{
+		StartDate: monday.Format("2006-01-02"),
+		EndDate:   sunday.Format("2006-01-02"),
+		Daily:     make([]DailyPoint, 7),
+	}
+
+	// 每日槽位（即使没打卡也占位，客户端画 7 根柱子）
+	for i := 0; i < 7; i++ {
+		d := monday.AddDate(0, 0, i)
+		vo.Daily[i] = DailyPoint{Date: d.Format("2006-01-02"), Weekday: i + 1}
+	}
+	if s.checkins == nil {
+		return vo, nil
+	}
+
+	list, err := s.checkins.BriefInRange(ctx, uid,
+		vo.StartDate, vo.EndDate)
+	if err != nil {
+		return nil, err
+	}
+	// 日聚合 + 品类聚合 + 每日主品类
+	dayCount := map[string]int{}
+	dayCat := map[string]map[int8]int{}
+	catCount := map[int8]int{}
+	for _, c := range list {
+		d := normalizeDate(c.CheckinDate)
+		dayCount[d]++
+		catCount[c.Category]++
+		if dayCat[d] == nil {
+			dayCat[d] = map[int8]int{}
+		}
+		dayCat[d][c.Category]++
+	}
+	vo.Count = len(list)
+	for i := range vo.Daily {
+		d := vo.Daily[i].Date
+		vo.Daily[i].Count = dayCount[d]
+		if cnt := len(dayCat[d]); cnt > 0 {
+			vo.Daily[i].Category = dominantCategory(dayCat[d])
+		}
+	}
+	for _, c := range vo.Daily {
+		if c.Count > 0 {
+			vo.Days++
+		}
+	}
+	for cat, n := range catCount {
+		vo.Categories = append(vo.Categories, CategoryStat{Category: cat, Count: n})
+	}
+	sort.Slice(vo.Categories, func(i, j int) bool {
+		if vo.Categories[i].Count != vo.Categories[j].Count {
+			return vo.Categories[i].Count > vo.Categories[j].Count
+		}
+		return vo.Categories[i].Category < vo.Categories[j].Category
+	})
+
+	// 上周对比
+	if last, err := s.checkins.BriefInRange(ctx, uid,
+		lastMonday.Format("2006-01-02"), lastSunday.Format("2006-01-02")); err == nil {
+		vo.LastCount = len(last)
+	}
+	vo.Delta = vo.Count - vo.LastCount
+
+	// 连续天数（跨周连续，不是仅本周）
+	if dates, err := s.checkins.DistinctDates(ctx, uid, 400); err == nil {
+		_, vo.StreakDays = computeStreak(dates, now)
+	}
+	return vo, nil
+}
+
+// dominantCategory 取出现次数最多的品类（并列时取编号小的，保证稳定）。
+func dominantCategory(m map[int8]int) int8 {
+	var best int8
+	bestN := -1
+	for cat, n := range m {
+		if n > bestN || (n == bestN && cat < best) {
+			best, bestN = cat, n
+		}
+	}
+	return best
+}
+
 // normalizeDate 归一日期字符串：兼容 "2006-01-02" 与 parseTime 扫描出的
 // RFC3339 全格式（DATE 列经 database/sql 转 string 会带时间与时区）。
 func normalizeDate(d string) string {

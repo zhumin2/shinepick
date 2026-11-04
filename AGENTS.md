@@ -112,6 +112,7 @@ shinepick/
 | GET | `/feed/companions?cursor=` | 同路人动态流（互为同路人的最新公开拾光，排除自己，JOIN 关系表） |
 | GET | `/explore?category=&cursor=` | 发现页分页浏览 |
 | GET | `/checkins/:id` | 详情，响应 `{checkin, user}`（user=作者昵称/头像）；非作者仅 visibility=2 可见 |
+| GET | `/users/me/weekly` | 拾光周报（周一至周日）：本周次数/天数/连续、上周对比、7 日明细（含当日主品类）、品类分布 |
 | GET | `/tree` | 树状态 + 季节 + 光点历史 |
 | GET | `/badges` | 徽章列表；POST `/badges/evaluate` 幂等补发 |
 | GET/POST | `/notifications` `/notifications/read` | 通知列表/全部已读 |

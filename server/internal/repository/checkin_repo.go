@@ -132,6 +132,17 @@ func (r *CheckinRepo) DistinctDates(ctx context.Context, uid int64, limit int) (
 	return dates, err
 }
 
+// BriefInRange 日期区间 [start,end] 内的有效打卡（只取日期与品类，周报聚合用）。
+func (r *CheckinRepo) BriefInRange(ctx context.Context, uid int64, start, end string) ([]model.Checkin, error) {
+	var list []model.Checkin
+	err := r.db.WithContext(ctx).Model(&model.Checkin{}).
+		Select("checkin_date", "category").
+		Where("user_id = ? AND status = 0 AND checkin_date >= ? AND checkin_date <= ?",
+			uid, start, end).
+		Find(&list).Error
+	return list, err
+}
+
 // CheckinWithUser 打卡 + 作者信息（Feed/发现页用）。
 type CheckinWithUser struct {
 	model.Checkin

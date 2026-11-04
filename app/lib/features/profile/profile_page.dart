@@ -200,6 +200,56 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
             const SizedBox(height: 16),
+            // 本周拾光周报入口
+            Material(
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: AppTheme.divider),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => context.push('/weekly'),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.insights_outlined,
+                            size: 18, color: AppTheme.primaryDark),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('拾光周报',
+                                style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.textMain)),
+                            SizedBox(height: 2),
+                            Text('这一周拾起了多少光点',
+                                style: TextStyle(
+                                    fontSize: 12, color: AppTheme.textSub)),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right,
+                          size: 18, color: AppTheme.textSub),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             // 最近的拾光（原型 list-row：品类色块 + 标题 + 时间 · 品类 · 可见性）
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

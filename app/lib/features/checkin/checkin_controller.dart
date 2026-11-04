@@ -39,6 +39,8 @@ class CheckinController extends ChangeNotifier {
   List<FeedItem> _dailySelected = [];
   List<FeedItem> _doing = [];
   List<FeedItem> _companionFeed = [];
+  int _companionNextCursor = 0;
+  bool _companionLoadingMore = false;
   bool _feedLoading = false;
   bool _feedOffline = false;
 
@@ -53,6 +55,8 @@ class CheckinController extends ChangeNotifier {
   List<FeedItem> get dailySelected => List.unmodifiable(_dailySelected);
   List<FeedItem> get doing => List.unmodifiable(_doing);
   List<FeedItem> get companionFeed => List.unmodifiable(_companionFeed);
+  int get companionNextCursor => _companionNextCursor;
+  bool get companionLoadingMore => _companionLoadingMore;
   bool get feedLoading => _feedLoading;
   bool get feedOffline => _feedOffline;
 
@@ -200,16 +204,40 @@ class CheckinController extends ChangeNotifier {
   }
 
   /// 拉取同路人动态（GET /feed/companions）：互为同路人的最新拾光。
-  Future<void> loadCompanionFeed() async {
+  /// [cursor] 为 0 时重置列表，否则追加；返回是否还有更多。
+  Future<bool> loadCompanionFeed({int cursor = 0}) async {
     try {
+      final path =
+          cursor > 0 ? '/feed/companions?cursor=$cursor' : '/feed/companions';
       final data = await auth.api.get<Map<String, dynamic>>(
-        '/feed/companions',
+        path,
         parser: (d) => Map<String, dynamic>.from(d as Map),
       );
-      _companionFeed = _parseFeedItems(data['items']);
+      final items = _parseFeedItems(data['items']);
+      if (cursor == 0) {
+        _companionFeed = items;
+      } else {
+        _companionFeed = [..._companionFeed, ...items];
+      }
+      _companionNextCursor = (data['next_cursor'] as num?)?.toInt() ?? 0;
+      return _companionNextCursor > 0;
     } catch (_) {
       // 静默：同路人动态加载失败不打扰主页
+      return false;
     } finally {
+      notifyListeners();
+    }
+  }
+
+  /// 加载更多同路人动态（游标分页追加）。
+  Future<void> loadMoreCompanionFeed() async {
+    if (_companionLoadingMore || _companionNextCursor == 0) return;
+    _companionLoadingMore = true;
+    notifyListeners();
+    try {
+      await loadCompanionFeed(cursor: _companionNextCursor);
+    } finally {
+      _companionLoadingMore = false;
       notifyListeners();
     }
   }

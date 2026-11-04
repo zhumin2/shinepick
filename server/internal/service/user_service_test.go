@@ -183,3 +183,24 @@ func TestComputeStreak(t *testing.T) {
 		})
 	}
 }
+
+// v0.5.0 周报：当日主品类取出现最多者，并列取编号小的（保证稳定）。
+func TestDominantCategory(t *testing.T) {
+	cases := []struct {
+		name string
+		in   map[int8]int
+		want int8
+	}{
+		{"单项", map[int8]int{2: 3}, 2},
+		{"最多者胜", map[int8]int{1: 1, 2: 4, 3: 2}, 2},
+		{"并列取小编号", map[int8]int{3: 2, 1: 2}, 1},
+		{"空表返回0", map[int8]int{}, 0},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := dominantCategory(c.in); got != c.want {
+				t.Fatalf("dominantCategory(%v) = %d, want %d", c.in, got, c.want)
+			}
+		})
+	}
+}

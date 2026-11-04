@@ -1,8 +1,13 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/checkin.dart';
+import '../../shared/widgets/image_saver.dart';
+import '../../shared/widgets/toast.dart';
 import 'garden_controller.dart';
 import 'tree_painter.dart';
 
@@ -17,6 +22,8 @@ class GardenPage extends StatefulWidget {
 class _GardenPageState extends State<GardenPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _breath;
+  final GlobalKey _treeKey = GlobalKey();
+  bool _sharing = false;
 
   @override
   void initState() {
@@ -27,6 +34,27 @@ class _GardenPageState extends State<GardenPage>
     )..repeat();
     final c = context.read<GardenController>();
     Future.microtask(c.load);
+  }
+
+  /// 分享：截取整块树画布（天空+地面+树+光点）保存到相册/下载。
+  Future<void> _shareTree() async {
+    if (_sharing || _treeKey.currentContext == null) return;
+    setState(() => _sharing = true);
+    Toast.show(context, '正在生成拾光树图片…');
+    try {
+      final boundary =
+          _treeKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final bytes = byteData!.buffer.asUint8List();
+      final message = await saveImageBytes(
+          bytes, 'shinepick-tree-${DateTime.now().millisecondsSinceEpoch}.png', '');
+      if (mounted) Toast.show(context, message);
+    } catch (_) {
+      if (mounted) Toast.show(context, '生成失败，请重试');
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
   }
 
   @override
@@ -41,7 +69,22 @@ class _GardenPageState extends State<GardenPage>
     final tree = garden.tree;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('拾光树')),
+      appBar: AppBar(
+        title: const Text('拾光树'),
+        actions: [
+          IconButton(
+            icon: _sharing
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: AppTheme.primary))
+                : const Icon(Icons.ios_share_outlined, size: 20),
+            tooltip: '保存拾光树图片',
+            onPressed: tree == null ? null : _shareTree,
+          ),
+        ],
+      ),
       body: garden.loading && tree == null
           ? const Center(
               child: CircularProgressIndicator(color: AppTheme.primary))
@@ -78,68 +121,75 @@ class _GardenPageState extends State<GardenPage>
                   ),
                   const SizedBox(height: 8),
                   // 树画布（原型 garden-canvas：白卡 + 天空/地面分层）
-                  Container(
-                    decoration: BoxDecoration(
+                  // RepaintBoundary：分享时整块截图（含天空/地面/光点）
+                  RepaintBoundary(
+                    key: _treeKey,
+                    child: ColoredBox(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: AppTheme.cardShadow,
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: SizedBox(
-                      height: 300,
-                      child: Stack(
-                        children: [
-                          // 天空
-                          const Positioned(
-                            left: 0,
-                            right: 0,
-                            top: 0,
-                            height: 180,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Color(0xFFFDF6E8),
-                                    AppTheme.bg,
-                                  ],
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: AppTheme.cardShadow,
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: SizedBox(
+                          height: 300,
+                          child: Stack(
+                            children: [
+                              // 天空
+                              const Positioned(
+                                left: 0,
+                                right: 0,
+                                top: 0,
+                                height: 180,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Color(0xFFFDF6E8),
+                                        AppTheme.bg,
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                          // 地面
-                          const Positioned(
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            height: 105,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Color(0xFFE8E4D2),
-                                    Color(0xFFD8D4C0),
-                                  ],
+                              // 地面
+                              const Positioned(
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                height: 105,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Color(0xFFE8E4D2),
+                                        Color(0xFFD8D4C0),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                          AnimatedBuilder(
-                            animation: _breath,
-                            builder: (_, __) => CustomPaint(
-                              size: const Size(double.infinity, 300),
-                              painter: TreePainter(
-                                level: tree?.level ?? 1,
-                                season: tree?.season ?? 1,
-                                lightPoints: tree?.lightPoints ?? const [],
-                                breath: _breath.value,
+                              AnimatedBuilder(
+                                animation: _breath,
+                                builder: (_, __) => CustomPaint(
+                                  size: const Size(double.infinity, 300),
+                                  painter: TreePainter(
+                                    level: tree?.level ?? 1,
+                                    season: tree?.season ?? 1,
+                                    lightPoints: tree?.lightPoints ?? const [],
+                                    breath: _breath.value,
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
