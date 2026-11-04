@@ -405,25 +405,59 @@ class _TodayCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 6),
-              Text(_categoryLine(),
-                  style:
-                      const TextStyle(fontSize: 13, color: AppTheme.textSub)),
+              // 品类勾选行：用 Icon 而非「✓」字符（部分 ROM 缺字形会显示方块）
+              Wrap(
+                spacing: 10,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  for (final cat in const [
+                    CheckinCategory.sport,
+                    CheckinCategory.read,
+                    CheckinCategory.travel,
+                    CheckinCategory.social,
+                    CheckinCategory.pet,
+                    CheckinCategory.custom,
+                  ])
+                    if (cat != CheckinCategory.custom ||
+                        doneCategories.contains(cat.code))
+                      _CategoryDoneItem(
+                        label: cat.label,
+                        done: doneCategories.contains(cat.code),
+                      ),
+                ],
+              ),
             ],
           ),
         ],
       ),
     );
   }
+}
 
-  String _categoryLine() {
-    final names = ['运动', '阅读', '旅行', '社交', '宠物'];
-    final line = [
-      for (var i = 0; i < names.length; i++)
-        '${names[i]}${doneCategories.contains(i + 1) ? ' ✓' : ''}',
-    ].join(' · ');
-    // 自定义=兜底门类「其他」
-    final other = doneCategories.contains(CheckinCategory.custom.code);
-    return other ? '\$line · 其他 ✓' : line;
+/// 今日卡上的单个品类：名称 + 完成时的对勾图标。
+class _CategoryDoneItem extends StatelessWidget {
+  final String label;
+  final bool done;
+  const _CategoryDoneItem({required this.label, required this.done});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label,
+            style: TextStyle(
+              fontSize: 13,
+              color: done ? AppTheme.primaryDark : AppTheme.textSub,
+              fontWeight: done ? FontWeight.w600 : FontWeight.w400,
+            )),
+        if (done) ...[
+          const SizedBox(width: 2),
+          const Icon(Icons.check, size: 13, color: AppTheme.primaryDark),
+        ],
+      ],
+    );
   }
 }
 
