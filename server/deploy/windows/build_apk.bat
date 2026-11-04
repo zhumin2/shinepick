@@ -7,4 +7,4 @@ set "PUB_HOSTED_URL=https://pub.flutter-io.cn"
 set "FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn"
 
 cd /d D:\code\elive\shinepick\app
-D:\Apps\flutter-sdk\flutter\bin\flutter.bat build apk --release --dart-define=API_BASE_URL=http://8.134.144.35:8080/api/v1 --dart-define=APP_VERSION=0.4.0
+D:\Apps\flutter-sdk\flutter\bin\flutter.bat build apk --release --dart-define=API_BASE_URL=http://8.134.144.35:8080/api/v1 --dart-define=APP_VERSION=0.4.1

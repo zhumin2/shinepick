@@ -1,7 +1,7 @@
 name: shinepick
 description: 拾光 ShinePick - 记录正向日常的社交 App
 publish_to: 'none'
-version: 0.4.0+1
+version: 0.4.1+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
