@@ -38,6 +38,7 @@ var (
 	ErrFrequent     = errors.New("frequent")
 	ErrSmsInvalid   = errors.New("sms_invalid")
 	ErrUnauthorized = errors.New("unauthorized")
+	ErrBanned       = errors.New("banned")
 )
 
 // AuthService 账号体系：验证码、登录、刷新。
@@ -105,6 +106,10 @@ func (s *AuthService) Login(ctx context.Context, phone, smsCode string) (*LoginR
 	} else if err != nil {
 		return nil, err
 	}
+	// 封禁用户拦截（v0.6.0 T2）：新用户 Status 恒为 0，统一判断无副作用
+	if u.Status != 0 {
+		return nil, ErrBanned
+	}
 
 	// 3. 签发双 Token
 	access, err := s.jwt.Generate(u.ID, accessTTL)
@@ -135,6 +140,15 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*LoginR
 	}
 	// 用一次删一次（轮换）
 	s.rdb.Del(ctx, "rt:"+refreshToken)
+
+	// 封禁用户不允许续期：refresh 已被轮换删除，等于强制其重新走登录（登录同样被拦）
+	var status int8
+	if err := s.db.WithContext(ctx).Table("users").Select("status").Where("id = ?", uid).Scan(&status).Error; err != nil {
+		return nil, err
+	}
+	if status != 0 {
+		return nil, ErrBanned
+	}
 
 	access, err := s.jwt.Generate(uid, accessTTL)
 	if err != nil {

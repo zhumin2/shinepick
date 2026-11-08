@@ -1,7 +1,7 @@
 # AGENTS.md — 拾光 ShinePick 项目背景
 
 > 给后续 agent 的项目全貌：产品定位、代码结构、构建部署、Sprint 历史、踩坑经验、当前状态。
-> 最后更新：2026-11-03（服务端已迁移到 8.134.144.35）。
+> 最后更新：2026-11-08（v0.6.0 后台强化开发完成，待发版）。
 
 ---
 
@@ -120,19 +120,35 @@ shinepick/
 | POST | `/reports` | 举报 |
 | POST | `/uploads/images` | 多图上传（≤9 张，单张 ≤5MB） |
 
-**运营（`/admin`，X-Admin-Token）**
+**运营（`/admin`，X-Admin-Token + 同 IP 10 次失败锁 10 分钟防爆破）**
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | GET | `/admin/stats` | 北极星指标面板数据 |
+| GET | `/admin/stats/trend?days=` | 逐日 DAU/打卡数/新增用户（缺省 14 天，1–60） |
 | PUT | `/admin/feed/selected` | 指定今日精选 |
 | POST | `/admin/feed/rebuild` | 重建今日精选 |
-| GET | `/admin` | HTML 运营面板 |
+| GET | `/admin/reports?status=&page=` | 举报列表（含被举报对象内容快照；status 0/1/2/all） |
+| POST | `/admin/reports/:id/handle` | 处理举报 `{action: delete_content\|ban_user\|dismiss, note?}` |
+| GET | `/admin/users?keyword=&page=` | 用户列表（昵称模糊/ID 精确；手机号密文不可搜） |
+| GET | `/admin/users/:id` | 用户详情（资料+统计+最近 10 条打卡含未公开） |
+| PUT | `/admin/users/:id/status` | 封禁/解封 `{status:0\|1}`，即时失效/恢复登录态 |
+| GET | `/admin/checkins?keyword=&category=&page=` | 全量打卡巡检（含未公开/已删） |
+| DELETE | `/admin/checkins/:id` | 下架打卡（软删+重建今日微光） |
+| GET | `/admin/comments?keyword=&page=` | 留言巡检 |
+| DELETE | `/admin/comments/:id` | 删留言 |
+| POST | `/admin/announcements` | 系统公告 `{user_ids:null(全员)\|[..], content≤140}` → notifications type=5 |
+| GET | `/admin/feedback?status=&page=` | 意见反馈列表 |
+| POST | `/admin/feedback/:id/done` | 标记反馈已处理 |
+| GET | `/admin/actions?page=` | 管理操作留底查询 |
+| GET | `/admin` | HTML 运营面板（tab：指标/举报/用户/内容/公告/反馈/日志；面板无 token 输入值，token 存 localStorage） |
+
+**登录态补充（v0.6.0）**：`POST /feedback` 意见反馈（≤200 字，10 分钟 1 条）。 |
 
 **静态**：`/static/*` → `UPLOAD_DIR`（含 `/static/web/` 前端产物，带 `Cache-Control: no-cache, must-revalidate`）；头像 `/static/avatars/`，配图 `/static/images/`。
 
 ### 4.2 错误码（`internal/pkg/code`）
 
-`0` 成功；`1001` 参数错误；`2001` 未登录/过期；`3001` 验证码错误/过期；`4001` 操作过于频繁；`4101` 审核未通过；`5001` 不存在/已删除；`5002` 无权限；`9000` 内部错误。响应统一 `{code,message,data,request_id}`。
+`0` 成功；`1001` 参数错误；`2001` 未登录/过期；`3001` 验证码错误/过期；`4001` 操作过于频繁；`4101` 审核未通过；`5001` 不存在/已删除；`5002` 无权限；`5003` 账号已被封禁；`9000` 内部错误。响应统一 `{code,message,data,request_id}`。
 
 ### 4.3 关键实现约定
 
@@ -333,16 +349,20 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/shinepick-api-linux-amd64 
 ## 12. 当前状态与下一步
 
 ### 已完成
-- S1–S8、M1–M4；原型对齐；emoji；图片压缩/全屏；他人公开主页；服务器迁移完成。
+- S1–S8、M1–M4；原型对齐；emoji；图片压缩/全屏；他人公开主页；服务器迁移；**v0.4.0 检查更新发版闭环、v0.4.1 图标、v0.5.0 周报/树分享/同路人分页、v0.5.1/0.5.2 修复与暖心短句**。
+- **v0.6.0 后台强化（2026-11-08 本地完成、curl 冒烟全过，待发版）**：
+  - 安全：admin 防爆破（10 次锁 10 分钟）、面板去明文 token、Auth 中间件封禁校验（Redis 60s 缓存 + 管理动作即时失效缓存）、登录/刷新拦封禁（新错误码 5003）。
+  - 治理：举报处理台（快照+删内容/封作者/驳回）、用户管理（搜索/详情/封禁解封）、内容巡检（打卡/留言搜索+下架）；**公开流三查询补 `users.status=0` 过滤**（每日精选候选/今日品类/发现页——此前封禁后内容仍在公开流）、打卡详情非作者视角拦封禁作者。
+  - 运营：系统公告（全员/定向，批量 INSERT 500/批）、14 天趋势、意见反馈（服务端+设置页入口）、管理操作留底（0009）、面板 tab 化（page.go，7 tab）。
+  - 迁移：0008 feedback、0009 admin_actions（本地 dev 库已应用）。
+  - 测试：go build/vet/test 全绿（新增 middleware 3 项 + service 2 项）；flutter analyze 0 问题 + 29 测试全绿；客户端版本 0.6.0。
 
 ### 待办（优先级从高到低）
-1. **把 v0.2.1 APK 发布到服务器**（`/opt/apkserver/apks`，替换旧 v0.2.0；本机无 SSH 私钥，需用户侧上传）。
-2. **打卡详情页**：卡片只有 2 条留言预览，需要完整留言 + 大图入口。
-3. **通知点击跳转**：点亮/拥抱/留言通知直达对应打卡。
-4. **Web 宽屏适配**：曾用 `ConstrainedBox(maxWidth: 480)` 失败并与测试冲突（已回退），建议改用 `LayoutBuilder` 或独立宽屏布局。
-5. **S9 计划项**：压测（P95<300ms）、防刷（限流/设备指纹）、监控（Prometheus/Sentry）、审核误伤收敛。
-6. **生产化**：JWT_SECRET/ADMIN_TOKEN/DB 密码仍为默认；短信仍 mock（任何手机号 + 123456）；建议 Nginx + HTTPS + 域名；图片 URL 建议改存相对路径。
-7. S8-04/06（TestFlight、崩溃上报、反馈收集）需外部资源。
+1. **v0.6.0 发版**：push → 服务器 `git pull` + 应用 0008/0009 迁移 + `shinepick.sh update`（注意 /usr/local/bin/shinepick.sh 快照需手动 cp）→ **更换服务器 ADMIN_TOKEN（不再用默认值）** + 面板验证；APK 需重打包（设置页新增反馈入口）并按文件名 `shinepick-server-v0.6.0-android.apk` 传 apkserver。
+2. **生产化**：服务器 DB 密码/JWT_SECRET 仍默认；短信仍 mock（任何手机号 + 123456）；建议 Nginx + HTTPS + 域名；图片 URL 建议改存相对路径。
+3. 留存方向候选（v0.7）：本地打卡提醒（flutter_local_notifications）、拾光日历、年底年度回顾。
+4. S9 计划项：压测（P95<300ms）、防刷（设备指纹）、监控（Prometheus/Sentry）、审核误伤收敛（词库管理）。
+5. S8-04/06（TestFlight、崩溃上报）需外部资源。
 
 ### 明确暂缓
 - 腾讯云短信真实发送：代码已就绪，等签名/模板审核与凭据，**不要主动推进**。

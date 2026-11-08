@@ -58,6 +58,10 @@ func (h *Handler) Login(c *gin.Context) {
 			httpx.Fail(c, code.ErrSmsInvalid)
 			return
 		}
+		if errors.Is(err, service.ErrBanned) {
+			httpx.Fail(c, code.ErrBanned)
+			return
+		}
 		httpx.Fail(c, code.ErrInternal)
 		return
 	}
@@ -76,6 +80,10 @@ func (h *Handler) Refresh(c *gin.Context) {
 	if err != nil {
 		if errors.Is(err, service.ErrUnauthorized) {
 			httpx.Fail(c, code.ErrUnauthorized)
+			return
+		}
+		if errors.Is(err, service.ErrBanned) {
+			httpx.Fail(c, code.ErrBanned)
 			return
 		}
 		httpx.Fail(c, code.ErrInternal)

@@ -159,7 +159,8 @@ func (r *CheckinRepo) ListTodayPublicByCategory(ctx context.Context, date string
 		Select(withUserSelect).
 		Joins("JOIN `users` ON `users`.`id` = `checkins`.`user_id`").
 		Where("checkins.checkin_date = ? AND checkins.category = ? AND checkins.visibility = 2 AND checkins.status = 0 AND checkins.user_id <> ?",
-			date, category, excludeUID).
+						date, category, excludeUID).
+		Where("users.status = 0"). // 封禁作者不出现在公开流（v0.6.0 T4）
 		Order("checkins.id DESC").
 		Limit(limit).
 		Find(&list).Error
@@ -190,6 +191,7 @@ func (r *CheckinRepo) ListDailyCandidates(ctx context.Context, date string, limi
 		Select(withUserSelect).
 		Joins("JOIN `users` ON `users`.`id` = `checkins`.`user_id`").
 		Where("checkins.checkin_date = ? AND checkins.visibility = 2 AND checkins.status = 0", date).
+		Where("users.status = 0"). // 封禁作者不进精选候选（v0.6.0 T4）
 		Order("checkins.id DESC").
 		Limit(limit).
 		Find(&list).Error
@@ -219,7 +221,8 @@ func (r *CheckinRepo) ListExplore(ctx context.Context, category int8, cursor int
 	q := r.db.WithContext(ctx).Model(&model.Checkin{}).
 		Select(withUserSelect).
 		Joins("JOIN `users` ON `users`.`id` = `checkins`.`user_id`").
-		Where("checkins.visibility = 2 AND checkins.status = 0")
+		Where("checkins.visibility = 2 AND checkins.status = 0").
+		Where("users.status = 0") // 封禁作者不出现在发现页（v0.6.0 T4）
 	if category > 0 {
 		q = q.Where("checkins.category = ?", category)
 	}

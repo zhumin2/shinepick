@@ -90,7 +90,7 @@ type CheckinService struct {
 	aud   audit.Auditor
 
 	onPublished func(ctx context.Context, uid, checkinID int64) // 发布后回调（S7 徽章评估）
-	onModified  func(ctx context.Context)                        // 删除/改可见范围后回调（今日微光缓存重建）
+	onModified  func(ctx context.Context)                       // 删除/改可见范围后回调（今日微光缓存重建）
 }
 
 // SetOnPublished 注册发布后回调（徽章评估，S7）。
@@ -298,6 +298,12 @@ func (s *CheckinService) Detail(ctx context.Context, viewerUID, id int64) (*Chec
 	}
 	if row.Status != 0 || (row.UserID != viewerUID && row.Visibility != 2) {
 		return nil, nil, gorm.ErrRecordNotFound
+	}
+	// 封禁作者的内容对非作者不可见（v0.6.0 T4；管理员走 /admin 巡检不经此处）
+	if row.UserID != viewerUID {
+		if u, err := s.urepo.ByID(ctx, row.UserID); err == nil && u.Status != 0 {
+			return nil, nil, gorm.ErrRecordNotFound
+		}
 	}
 	vo := toCheckinVO(&row.Checkin)
 	return vo, &FeedUser{ID: row.UserID, Nickname: row.Nickname, AvatarURL: row.AvatarURL}, nil

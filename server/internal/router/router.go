@@ -17,6 +17,7 @@ import (
 	"shinepick/internal/module/auth"
 	"shinepick/internal/module/checkin"
 	"shinepick/internal/module/feed"
+	"shinepick/internal/module/feedback"
 	"shinepick/internal/module/interaction"
 	"shinepick/internal/module/social"
 	"shinepick/internal/module/tree"
@@ -46,8 +47,8 @@ func Register(ctx context.Context, e *gin.Engine, db *gorm.DB, rdb *redis.Client
 	}), repo)
 	auth.NewHandler(authSvc).Register(api)
 
-	// 登录态接口
-	authed := api.Group("", middleware.Auth(jm))
+	// 登录态接口（Auth 内含封禁状态校验，v0.6.0 T2）
+	authed := api.Group("", middleware.Auth(jm, db, rdb))
 	checkinRepo := repository.NewCheckinRepo(db)
 	interRepo := repository.NewInteractionRepo(db)
 	aud := audit.New(cfg.AuditType, cfg.AuditRemoteURL, nil)
@@ -82,11 +83,14 @@ func Register(ctx context.Context, e *gin.Engine, db *gorm.DB, rdb *redis.Client
 		_ = feedSvc.RebuildDailySelected(ctx, today)
 	})
 
-	// 运营接口（S8-01/05：精选管理 + 数据面板，X-Admin-Token 鉴权）
-	adminSvc := service.NewAdminService(db, feedSvc)
-	admin.NewHandler(adminSvc, feedSvc, cfg).Register(e)
+	// 运营接口（S8-01/05 精选与面板；v0.6.0 扩展治理/公告，X-Admin-Token + 防爆破）
+	adminSvc := service.NewAdminService(db, feedSvc, rdb)
+	admin.NewHandler(adminSvc, feedSvc, cfg, rdb).Register(e)
 
 	upload.NewHandler(cfg.UploadDir, cfg.PublicBaseURL).Register(authed)
+
+	// 意见反馈（v0.6.0 T8，登录态）
+	feedback.NewHandler(service.NewFeedbackService(db, rdb)).Register(authed)
 
 	// Web 客户端禁缓存：每次都向服务器校验新鲜度，
 	// 避免发版后浏览器继续用旧的 main.dart.js（用户反馈过看不到新功能）

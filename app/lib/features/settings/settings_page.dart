@@ -217,6 +217,109 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  /// 意见反馈（v0.6.0 T8）：≤200 字，服务端 10 分钟 1 条频控。
+  Future<void> _showFeedback() async {
+    final ctrl = TextEditingController();
+    final api = context.read<AuthController>().api;
+    final submitting = ValueNotifier<bool>(false);
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => ValueListenableBuilder<bool>(
+        valueListenable: submitting,
+        builder: (ctx, busy, _) => Padding(
+          // 键盘弹出时抬起弹层，避免遮挡输入框
+          padding: EdgeInsets.fromLTRB(
+              20, 16, 20, 28 + MediaQuery.of(ctx).viewInsets.bottom),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Center(
+                child: Text('意见反馈',
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textMain)),
+              ),
+              const SizedBox(height: 6),
+              const Center(
+                child: Text('功能建议、问题反馈，都会直达开发者的耳朵',
+                    style: TextStyle(fontSize: 12, color: AppTheme.textSub)),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: ctrl,
+                maxLines: 4,
+                maxLength: 200,
+                enabled: !busy,
+                style: const TextStyle(
+                    fontSize: 14, color: AppTheme.textMain, height: 1.5),
+                decoration: InputDecoration(
+                  hintText: '说说你的想法…',
+                  hintStyle:
+                      const TextStyle(fontSize: 14, color: AppTheme.textSub),
+                  filled: true,
+                  fillColor: AppTheme.bg,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppTheme.divider),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppTheme.divider),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 12)),
+                  onPressed: busy
+                      ? null
+                      : () async {
+                          final text = ctrl.text.trim();
+                          if (text.isEmpty) {
+                            Toast.show(ctx, '写点内容再提交吧');
+                            return;
+                          }
+                          submitting.value = true;
+                          try {
+                            await api.post('/feedback',
+                                data: {'content': text});
+                            if (!ctx.mounted) return;
+                            Navigator.of(ctx).pop();
+                            if (mounted) Toast.show(context, '已收到，谢谢你的反馈');
+                          } catch (_) {
+                            submitting.value = false;
+                            Toast.show(ctx, '提交失败，请稍后重试');
+                          }
+                        },
+                  child: busy
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Text('提交',
+                          style: TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _logout() async {
     final ok = await showDialog<bool>(
       context: context,
@@ -287,6 +390,16 @@ class _SettingsPageState extends State<SettingsPage> {
                   trailing: const Icon(Icons.chevron_right,
                       size: 18, color: AppTheme.textSub),
                   onTap: _blocked.isEmpty ? null : _manageBlocked,
+                ),
+                const Divider(height: 1, indent: 16, color: AppTheme.divider),
+                ListTile(
+                  title: const Text('意见反馈',
+                      style: TextStyle(fontSize: 15, color: AppTheme.textMain)),
+                  subtitle: const Text('功能建议与问题都会被认真看到',
+                      style: TextStyle(fontSize: 12, color: AppTheme.textSub)),
+                  trailing: const Icon(Icons.chevron_right,
+                      size: 18, color: AppTheme.textSub),
+                  onTap: _showFeedback,
                 ),
                 // 检查更新仅 Android 显示（Web 用浏览器无此需求；桌面端未分发）
                 if (!kIsWeb && Platform.isAndroid) ...[

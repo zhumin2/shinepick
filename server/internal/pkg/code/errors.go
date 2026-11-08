@@ -9,6 +9,7 @@ const (
 	ErrTooFrequent  = 4001 // 操作过于频繁
 	ErrNotFound     = 5001 // 目标不存在或已删除
 	ErrForbidden    = 5002 // 无权限
+	ErrBanned       = 5003 // 账号已被封禁
 	ErrAuditReject  = 4101 // 内容未通过审核
 	ErrInternal     = 9000 // 服务内部错误
 )
@@ -30,6 +31,8 @@ func Message(code int) string {
 		return "目标不存在或已删除"
 	case ErrForbidden:
 		return "没有权限"
+	case ErrBanned:
+		return "账号已被封禁"
 	case ErrAuditReject:
 		return "内容未通过审核"
 	default:
