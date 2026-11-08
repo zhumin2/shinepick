@@ -221,10 +221,10 @@ mock 验证码固定 `123456`（`SMS_TYPE=mock`），日志 `[sms:mock]` 可见�
 ### Web（同源，部署用）
 ```bash
 cd app && flutter build web --release \
-  --dart-define=API_BASE_URL=/api/v1 --base-href /static/web/
+  --dart-define=API_BASE_URL=/api/v1 --base-href=/static/web/
 # 产物拷到 server/uploads/web/ 与 server/deploy/linux/web/
 ```
-访问 `http://<host>:8080/static/web/`。
+访问 `http://<host>:8080/static/web/`。**Git Bash 坑**：`--base-href /static/web/` 会被 MSYS 路径转换劫持成 `C:/Program Files/Git/static/web/`（构建日志可见）——必须 `MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL="*"` 前缀或写 `--base-href=/static/web/` 等号形式加环境变量；验证产物用 ASCII 特征串（如 grep `feedback`）。
 
 ### Android APK
 ```bash
