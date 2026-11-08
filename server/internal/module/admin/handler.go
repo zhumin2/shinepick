@@ -46,6 +46,11 @@ func (h *Handler) Register(e *gin.Engine) {
 	g.GET("/feedback", h.FeedbackList)
 	g.POST("/feedback/:id/done", h.FeedbackDone)
 	g.GET("/actions", h.Actions)
+	g.GET("/trash/checkins", h.TrashCheckins)
+	g.GET("/trash/comments", h.TrashComments)
+	g.POST("/trash/checkins/:id/restore", h.RestoreCheckin)
+	g.POST("/trash/comments/:id/restore", h.RestoreComment)
+	g.GET("/announcements", h.AnnouncementList)
 	// 面板页（页面本身不含敏感数据，fetch 时带 token）
 	e.GET("/admin", h.page)
 }
@@ -418,4 +423,68 @@ func (h *Handler) Actions(c *gin.Context) {
 		return
 	}
 	httpx.OK(c, gin.H{"list": list, "total": total, "page": page, "page_size": pageSize})
+}
+
+// ---------- 回收站与公告记录（v0.6.1） ----------
+
+// TrashCheckins GET /admin/trash/checkins?page=&page_size= —— 已删打卡。
+func (h *Handler) TrashCheckins(c *gin.Context) {
+	page, pageSize := pageParams(c)
+	list, total, err := h.svc.AdminTrashCheckins(c, page, pageSize)
+	if err != nil {
+		httpx.Fail(c, code.ErrInternal)
+		return
+	}
+	httpx.OK(c, gin.H{"list": list, "total": total, "page": page, "page_size": pageSize})
+}
+
+// TrashComments GET /admin/trash/comments?page=&page_size= —— 已删留言。
+func (h *Handler) TrashComments(c *gin.Context) {
+	page, pageSize := pageParams(c)
+	list, total, err := h.svc.AdminTrashComments(c, page, pageSize)
+	if err != nil {
+		httpx.Fail(c, code.ErrInternal)
+		return
+	}
+	httpx.OK(c, gin.H{"list": list, "total": total, "page": page, "page_size": pageSize})
+}
+
+// RestoreCheckin POST /admin/trash/checkins/:id/restore —— 恢复已删打卡（重建今日微光）。
+func (h *Handler) RestoreCheckin(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		httpx.FailMsg(c, code.ErrBadRequest, "id 不合法")
+		return
+	}
+	if err := h.svc.RestoreCheckin(c, id); err != nil {
+		httpx.Fail(c, code.ErrInternal)
+		return
+	}
+	h.svc.LogAction(c, "restore_checkin", "checkin", id, "")
+	httpx.OK(c, gin.H{"restored": true})
+}
+
+// RestoreComment POST /admin/trash/comments/:id/restore —— 恢复已删留言。
+func (h *Handler) RestoreComment(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		httpx.FailMsg(c, code.ErrBadRequest, "id 不合法")
+		return
+	}
+	if err := h.svc.RestoreComment(c, id); err != nil {
+		httpx.Fail(c, code.ErrInternal)
+		return
+	}
+	h.svc.LogAction(c, "restore_comment", "comment", id, "")
+	httpx.OK(c, gin.H{"restored": true})
+}
+
+// AnnouncementList GET /admin/announcements —— 近期公告批次与已读率。
+func (h *Handler) AnnouncementList(c *gin.Context) {
+	list, err := h.svc.AdminAnnouncements(c)
+	if err != nil {
+		httpx.Fail(c, code.ErrInternal)
+		return
+	}
+	httpx.OK(c, gin.H{"list": list})
 }

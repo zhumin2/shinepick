@@ -38,6 +38,7 @@ img.thumb{max-width:56px;max-height:56px;border-radius:8px;margin:3px 3px 0 0;ve
 .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px;min-width:0}
 .bar i{display:block;background:#E89B3C;border-radius:3px 3px 0 0;width:100%}
 .bar span{font-size:9px;color:#8A8578;white-space:nowrap}
+@media (max-width:640px){body{margin:12px auto;padding:0 10px}h1{font-size:18px}td,th{padding:6px 7px;font-size:12px}.card{padding:8px 9px}.row{gap:6px}input,textarea,select,button{padding:7px 9px;font-size:13px}.bars{height:100px}}
 </style></head><body>
 <h1>拾光 · 运营面板</h1>
 <div class="row"><input id="tk" placeholder="X-Admin-Token" size="30" type="password"> <button onclick="saveTk()">保存并刷新</button> <span class="muted">token 仅存本机 localStorage</span></div>
@@ -49,6 +50,7 @@ img.thumb{max-width:56px;max-height:56px;border-radius:8px;margin:3px 3px 0 0;ve
 <div id="tab-announce" class="tab"></div>
 <div id="tab-feedback" class="tab"></div>
 <div id="tab-actions" class="tab"></div>
+<div id="tab-trash" class="tab"></div>
 <div id="out"></div>
 <script>
 var TK=localStorage.getItem('admin_tk')||'';
@@ -59,15 +61,15 @@ function set(id,html){document.getElementById(id).innerHTML=html}
 function showErr(e){document.getElementById('out').textContent=(e&&e.message)?e.message:''}
 function fmtTime(s){return s?String(s).replace('T',' ').slice(0,16):''}
 function imgs(j){try{var a=JSON.parse(j);if(!a||!a.length)return '';var h='';for(var i=0;i<a.length;i++)h+='<img class="thumb" src="'+esc(a[i])+'">';return h}catch(_){return ''}}
-var PAGES={reports:1,users:1,checkins:1,comments:1,feedback:1,actions:1};
+var PAGES={reports:1,users:1,checkins:1,comments:1,feedback:1,actions:1,trashC:1,trashM:1};
 async function api(path,opts){var o=opts||{};o.headers=Object.assign({'X-Admin-Token':TK},o.headers||{});if(o.body&&!o.headers['Content-Type'])o.headers['Content-Type']='application/json';var r=await fetch(path,o);var j=await r.json();if(j.code!==0){throw new Error(j.message||('code '+j.code))}return j.data}
 
-var TABS=[['stats','指标'],['reports','举报'],['users','用户'],['content','内容'],['announce','公告'],['feedback','反馈'],['actions','日志']];
+var TABS=[['stats','指标'],['reports','举报'],['users','用户'],['content','内容'],['announce','公告'],['feedback','反馈'],['actions','日志'],['trash','回收站']];
 var cur='stats';
 function buildTabs(){var b='';for(var i=0;i<TABS.length;i++){b+='<button id="tb-'+TABS[i][0]+'">'+TABS[i][1]+'</button>'}set('tabs',b)}
 document.getElementById('tabs').addEventListener('click',function(ev){var b=ev.target.closest('button');if(!b)return;switchTab(b.id.slice(3))});
 function switchTab(t){cur=t;for(var i=0;i<TABS.length;i++){var on=TABS[i][0]===t;set('tab-'+TABS[i][0],'');document.getElementById('tab-'+TABS[i][0]).style.display=on?'block':'none';document.getElementById('tb-'+TABS[i][0]).className=on?'on':''}showErr({message:''});loadTab()}
-function loadTab(){if(cur==='stats')loadStats();else if(cur==='reports'){PAGES.reports=1;loadReports()}else if(cur==='users'){PAGES.users=1;loadUsers()}else if(cur==='content')loadContent();else if(cur==='announce')renderAnnounce();else if(cur==='feedback'){PAGES.feedback=1;loadFeedback()}else if(cur==='actions'){PAGES.actions=1;loadActions()}}
+function loadTab(){if(cur==='stats')loadStats();else if(cur==='reports'){PAGES.reports=1;loadReports('0')}else if(cur==='users'){PAGES.users=1;loadUsers()}else if(cur==='content')loadContent();else if(cur==='announce')renderAnnounce();else if(cur==='feedback'){PAGES.feedback=1;loadFeedback('0')}else if(cur==='actions'){PAGES.actions=1;loadActions()}else if(cur==='trash'){PAGES.trashC=1;PAGES.trashM=1;loadTrash()}}
 
 // ---- 指标 ----
 async function loadStats(){try{var d=await api('/admin/stats');var t=await api('/admin/stats/trend?days=14');
@@ -87,6 +89,7 @@ h+='</div>';set('tab-stats',h)}catch(e){showErr(e)}}
 // ---- 举报 ----
 function ttName(t){return t===1?'打卡':(t===2?'留言':'用户')}
 function stName(s){return s===0?'待处理':(s===1?'已处理':'驳回')}
+function reasonName(r){return r===1?'用户举报':'理由 '+r}
 async function loadReports(){try{var st=arguments.length>0?arguments[0]:'0';const d=await api('/admin/reports?status='+st+'&page='+PAGES.reports);
 var h='<div class="row">状态 <select onchange="loadReports(this.value)">';
 var opts=[['0','待处理'],['1','已处理'],['2','驳回'],['all','全部']];
@@ -96,7 +99,7 @@ if(PAGES.reports>1)h+=' <button class="ghost" onclick="PAGES.reports--;loadRepor
 if(PAGES.reports*d.page_size<d.total)h+=' <button class="ghost" onclick="PAGES.reports++;loadReports(document.getElementById(\'rp-sel\')?document.getElementById(\'rp-sel\').value:\'0\')">下一页</button>';
 h+='</div>';
 for(var i=0;i<d.list.length;i++){var r=d.list[i];var s=r.snapshot||{};
-h+='<div class="card"><b>#'+r.id+'</b> · '+ttName(r.target_type)+' '+r.target_id+' · 举报理由 '+r.reason+' · '+(s.author?esc(s.author):'（已删）')+(s.author_id?'（uid '+s.author_id+'）':'')+' · '+fmtTime(r.created_at)+' · '+stName(r.status);
+h+='<div class="card"><b>#'+r.id+'</b> · '+ttName(r.target_type)+' '+r.target_id+' · '+reasonName(r.reason)+' · '+(s.author?esc(s.author):'（已删）')+(s.author_id?'（uid '+s.author_id+'）':'')+' · '+fmtTime(r.created_at)+' · '+stName(r.status);
 h+='<div class="sn">'+esc(s.content||'')+'</div>'+(s.images?imgs(s.images):'');
 if(r.detail)h+='<div class="muted">举报说明：'+esc(r.detail)+'</div>';
 if(r.status===0){h+='<div class="row"><button data-act="rp-del" data-id="'+r.id+'">删内容</button><button class="danger" data-act="rp-ban" data-id="'+r.id+'">封作者</button><button class="ghost" data-act="rp-dismiss" data-id="'+r.id+'">驳回</button></div>'}
@@ -143,10 +146,18 @@ async function delCheckin(id){try{if(!confirm('下架打卡 '+id+'？'))return;a
 async function delComment(id){try{if(!confirm('删除留言 '+id+'？'))return;await api('/admin/comments/'+id,{method:'DELETE'});showErr({message:'已删除 #'+id});loadContent()}catch(e){showErr(e)}}
 
 // ---- 公告 ----
-function renderAnnounce(){set('tab-announce','<div class="card"><div class="row"><textarea id="a-txt" rows="3" style="flex:1" maxlength="140" placeholder="公告内容（≤140 字，将出现在用户通知页）"></textarea></div><div class="row">定向用户 ID（逗号分隔，留空=全员正常用户）<input id="a-ids" size="24"> <button onclick="sendAnnounce(false)">发全员</button> <button class="ghost" onclick="sendAnnounce(true)">发定向</button></div></div>')}
+function renderAnnounce(){set('tab-announce','<div class="card"><div class="row"><textarea id="a-txt" rows="3" style="flex:1" maxlength="140" placeholder="公告内容（≤140 字，将出现在用户通知页）"></textarea></div><div class="row">定向用户 ID（逗号分隔，留空=全员正常用户）<input id="a-ids" size="24"> <button onclick="sendAnnounce(false)">发全员</button> <button class="ghost" onclick="sendAnnounce(true)">发定向</button></div></div><div id="a-records"></div>');loadAnnounceRecords()}
+async function loadAnnounceRecords(){try{var d=await api('/admin/announcements');
+var h='<div class="muted" style="margin-top:14px">近期系统通知（含公告/徽章）与已读率（用户点「全部已读」计入）</div>';
+if(!d.list.length){h+='<div class="muted">还没有公告记录</div>'}else{
+h+='<table><tr><th>时间</th><th>内容</th><th>下发</th><th>已读</th><th>已读率</th></tr>';
+for(var i=0;i<d.list.length;i++){var r=d.list[i];
+h+='<tr><td>'+esc(r.date)+'</td><td class="sn">'+esc(r.content)+'</td><td>'+r.sent+'</td><td>'+r.read+'</td><td>'+r.read_pct.toFixed(1)+'%</td></tr>'}
+h+='</table>'}
+set('a-records',h)}catch(e){showErr(e)}}
 async function sendAnnounce(targeted){try{var content=document.getElementById('a-txt').value.trim();if(!content){showErr({message:'公告内容不能为空'});return}var body={user_ids:null,content:content};
 if(targeted){var raw=document.getElementById('a-ids').value.trim();if(!raw){showErr({message:'请填定向用户 ID'});return}var ids=[];var parts=raw.split(',');for(var i=0;i<parts.length;i++){var v=parseInt(parts[i].trim(),10);if(v>0)ids.push(v)}if(!ids.length){showErr({message:'定向 ID 无效'});return}body.user_ids=ids}
-var d=await api('/admin/announcements',{method:'POST',body:JSON.stringify(body)});showErr({message:'已下发 '+d.sent+' 条'});}catch(e){showErr(e)}}
+var d=await api('/admin/announcements',{method:'POST',body:JSON.stringify(body)});showErr({message:'已下发 '+d.sent+' 条'});loadAnnounceRecords();}catch(e){showErr(e)}}
 
 // ---- 反馈 ----
 async function loadFeedback(){try{var st=arguments.length>0?arguments[0]:'0';const d=await api('/admin/feedback?status='+st+'&page='+PAGES.feedback);
@@ -156,10 +167,35 @@ for(var i=0;i<opts.length;i++){h+='<option value="'+opts[i][0]+'"'+(opts[i][0]==
 h+='</select> 共 '+d.total+' 条</div>';
 for(var i=0;i<d.list.length;i++){var f=d.list[i];
 h+='<div class="card"><b>#'+f.id+'</b> · '+esc(f.author||'uid '+f.user_id)+' · '+fmtTime(f.created_at)+' · '+stName(f.status)+'<div class="sn">'+esc(f.content)+'</div>';
-if(f.status===0)h+='<div class="row"><button class="ghost" data-act="fb-done" data-id="'+f.id+'">标记已处理</button></div>';
+if(f.status===0)h+='<div class="row"><button class="ghost" data-act="fb-reply" data-id="'+f.id+'" data-uid="'+f.user_id+'">回复（定向公告）</button><button class="ghost" data-act="fb-done" data-id="'+f.id+'">标记已处理</button></div>';
 h+='</div>'}
 set('tab-feedback',h)}catch(e){showErr(e)}}
 async function markFeedback(id){try{await api('/admin/feedback/'+id+'/done',{method:'POST'});loadFeedback('0')}catch(e){showErr(e)}}
+async function replyFeedback(id,uid){try{var t=prompt('回复内容（≤140 字，将作为系统通知发给该用户）：');if(t===null)return;if(!t.trim()){showErr({message:'回复内容不能为空'});return}
+await api('/admin/announcements',{method:'POST',body:JSON.stringify({user_ids:[uid],content:t.trim()})});
+await api('/admin/feedback/'+id+'/done',{method:'POST'});
+showErr({message:'已回复并标记已处理'});loadFeedback('0')}catch(e){showErr(e)}}
+
+// ---- 回收站 ----
+async function loadTrash(){try{var dc=await api('/admin/trash/checkins?page='+PAGES.trashC);
+var h='<div class="muted">已删打卡（'+dc.total+' 条）——软删内容可一键恢复';
+if(PAGES.trashC>1)h+=' <button class="ghost" onclick="PAGES.trashC--;loadTrash()">上一页</button>';
+if(PAGES.trashC*dc.page_size<dc.total)h+=' <button class="ghost" onclick="PAGES.trashC++;loadTrash()">下一页</button>';
+h+='</div>';
+for(var i=0;i<dc.list.length;i++){var k=dc.list[i];
+h+='<div class="card">#'+k.id+' · '+esc(k.author||'uid '+k.user_id)+' · '+k.checkin_date+' · 品类'+k.category+' · 可见'+k.visibility+' · 删于 '+fmtTime(k.created_at)+'<div class="sn">'+esc(k.content)+'</div>'+(k.images?imgs(k.images):'');
+h+='<div class="row"><button data-act="tr-ck" data-id="'+k.id+'">恢复打卡</button></div></div>'}
+var dm=await api('/admin/trash/comments?page='+PAGES.trashM);
+h+='<div class="muted" style="margin-top:14px">已删留言（'+dm.total+' 条）';
+if(PAGES.trashM>1)h+=' <button class="ghost" onclick="PAGES.trashM--;loadTrash()">上一页</button>';
+if(PAGES.trashM*dm.page_size<dm.total)h+=' <button class="ghost" onclick="PAGES.trashM++;loadTrash()">下一页</button>';
+h+='</div>';
+for(var i=0;i<dm.list.length;i++){var m=dm.list[i];
+h+='<div class="card">#'+m.id+' · '+esc(m.author||'uid '+m.user_id)+' · 打卡'+m.checkin_id+' · '+fmtTime(m.created_at)+'<div class="sn">'+esc(m.content)+'</div>';
+h+='<div class="row"><button data-act="tr-cm" data-id="'+m.id+'">恢复留言</button></div></div>'}
+set('tab-trash',h)}catch(e){showErr(e)}}
+async function restoreCheckin(id){try{if(!confirm('恢复打卡 '+id+'？将回到作者的原可见范围。'))return;await api('/admin/trash/checkins/'+id+'/restore',{method:'POST'});showErr({message:'已恢复 #'+id});loadTrash()}catch(e){showErr(e)}}
+async function restoreComment(id){try{if(!confirm('恢复留言 '+id+'？'))return;await api('/admin/trash/comments/'+id+'/restore',{method:'POST'});showErr({message:'已恢复 #'+id});loadTrash()}catch(e){showErr(e)}}
 
 // ---- 日志 ----
 async function loadActions(){try{const d=await api('/admin/actions?page='+PAGES.actions);
@@ -181,7 +217,10 @@ else if(act==='u-ban')setUserStatus(+id,1);
 else if(act==='u-unban')setUserStatus(+id,0);
 else if(act==='c-del')delCheckin(+id);
 else if(act==='m-del')delComment(+id);
-else if(act==='fb-done')markFeedback(+id)});
+else if(act==='fb-done')markFeedback(+id);
+else if(act==='fb-reply')replyFeedback(+id,el.dataset.uid);
+else if(act==='tr-ck')restoreCheckin(+id);
+else if(act==='tr-cm')restoreComment(+id)});
 
 buildTabs();
 switchTab('stats');

@@ -706,3 +706,112 @@ func (s *AdminService) Actions(ctx context.Context, page, pageSize int) ([]*mode
 	}
 	return items, total, nil
 }
+
+// ---------- 回收站（v0.6.1：软删内容可恢复，治理防误伤兜底） ----------
+
+// AdminTrashCheckins 已删打卡分页（status=1，复用巡检行结构）。
+func (s *AdminService) AdminTrashCheckins(ctx context.Context, page, pageSize int) ([]*AdminCheckinItem, int64, error) {
+	q := s.db.WithContext(ctx).Table("checkins").
+		Joins("LEFT JOIN `users` ON `users`.`id` = `checkins`.`user_id`").
+		Where("checkins.status = 1")
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	if total == 0 {
+		return []*AdminCheckinItem{}, 0, nil
+	}
+	var items []*AdminCheckinItem
+	if err := q.Select(adminCheckinSelect).
+		Order("checkins.id DESC").
+		Offset((page - 1) * pageSize).Limit(pageSize).Scan(&items).Error; err != nil {
+		return nil, 0, err
+	}
+	for _, it := range items {
+		it.CheckinDate = trimDate(it.CheckinDate)
+	}
+	return items, total, nil
+}
+
+// AdminTrashComments 已删留言分页（status=1）。
+func (s *AdminService) AdminTrashComments(ctx context.Context, page, pageSize int) ([]*AdminCommentItem, int64, error) {
+	q := s.db.WithContext(ctx).Table("comments").
+		Joins("LEFT JOIN `users` ON `users`.`id` = `comments`.`user_id`").
+		Where("comments.status = 1")
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	if total == 0 {
+		return []*AdminCommentItem{}, 0, nil
+	}
+	var items []*AdminCommentItem
+	if err := q.Select("`comments`.`id`, `comments`.`checkin_id`, `comments`.`user_id`, `users`.`nickname` AS `author`, " +
+		"`comments`.`content`, `comments`.`status`, `comments`.`created_at`").
+		Order("comments.id DESC").
+		Offset((page - 1) * pageSize).Limit(pageSize).Scan(&items).Error; err != nil {
+		return nil, 0, err
+	}
+	return items, total, nil
+}
+
+// RestoreCheckin 恢复已删打卡（status 1→0）并重建今日微光——当日精选可能在删除时被剔除。
+func (s *AdminService) RestoreCheckin(ctx context.Context, id int64) error {
+	res := s.db.WithContext(ctx).Model(&model.Checkin{}).
+		Where("id = ? AND status = 1", id).Update("status", 0)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected > 0 && s.feed != nil {
+		today := time.Now().In(cstZone).Format("2006-01-02")
+		if err := s.feed.RebuildDailySelected(ctx, today); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// RestoreComment 恢复已删留言（status 1→0）。父打卡若仍在删态，留言仅在打卡可见处出现，无需额外处理。
+func (s *AdminService) RestoreComment(ctx context.Context, id int64) error {
+	return s.db.WithContext(ctx).Model(&model.Comment{}).
+		Where("id = ? AND status = 1", id).Update("status", 0).Error
+}
+
+// ---------- 公告记录与已读率（v0.6.1） ----------
+
+// AnnouncementItem 公告批次行（同文案同日视为一批）。
+type AnnouncementItem struct {
+	Content string  `json:"content"`
+	Date    string  `json:"date"`
+	Sent    int64   `json:"sent"`
+	Read    int64   `json:"read"`
+	ReadPct float64 `json:"read_pct"`
+}
+
+// AdminAnnouncements 近 20 个公告批次及已读率（is_read 在用户「全部已读」时置 1）。
+func (s *AdminService) AdminAnnouncements(ctx context.Context) ([]*AnnouncementItem, error) {
+	type row struct {
+		Extra string
+		D     string
+		N     int64
+		R     int64
+	}
+	var rows []row
+	if err := s.db.WithContext(ctx).Table("notifications").
+		Select("extra, DATE(created_at) AS d, COUNT(*) AS n, COALESCE(SUM(is_read), 0) AS r").
+		Where("type = 5 AND extra <> ''").
+		Group("extra, DATE(created_at)").
+		// ONLY_FULL_GROUP_BY：排序键必须是聚合式（created_at 原列不在 GROUP BY 内）
+		Order("MAX(created_at) DESC").Limit(20).Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	out := make([]*AnnouncementItem, 0, len(rows))
+	for _, r := range rows {
+		item := &AnnouncementItem{Content: r.Extra, Date: trimDate(r.D), Sent: r.N, Read: r.R}
+		if item.Sent > 0 {
+			item.ReadPct = float64(item.Read) / float64(item.Sent) * 100
+		}
+		out = append(out, item)
+	}
+	return out, nil
+}

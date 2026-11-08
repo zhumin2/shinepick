@@ -140,7 +140,10 @@ shinepick/
 | GET | `/admin/feedback?status=&page=` | 意见反馈列表 |
 | POST | `/admin/feedback/:id/done` | 标记反馈已处理 |
 | GET | `/admin/actions?page=` | 管理操作留底查询 |
-| GET | `/admin` | HTML 运营面板（tab：指标/举报/用户/内容/公告/反馈/日志；面板无 token 输入值，token 存 localStorage） |
+| GET | `/admin/trash/checkins?page=`、`GET /admin/trash/comments?page=` | 回收站：已删打卡/留言列表（v0.6.1） |
+| POST | `/admin/trash/checkins/:id/restore`、`POST /admin/trash/comments/:id/restore` | 恢复软删内容（打卡恢复后重建今日微光；v0.6.1） |
+| GET | `/admin/announcements` | 近期系统通知批次与已读率（type=5 按文案+日期聚合，v0.6.1） |
+| GET | `/admin` | HTML 运营面板（tab：指标/举报/用户/内容/公告/反馈/日志/回收站；公告 tab 含已读率表；反馈 tab 可一键回复=定向公告；面板无 token 输入值，token 存 localStorage） |
 
 **登录态补充（v0.6.0）**：`POST /feedback` 意见反馈（≤200 字，10 分钟 1 条）。 |
 
@@ -358,7 +361,7 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/shinepick-api-linux-amd64 
   - 测试：go build/vet/test 全绿（新增 middleware 3 项 + service 2 项）；flutter analyze 0 问题 + 29 测试全绿；客户端版本 0.6.0。
 
 ### 待办（优先级从高到低）
-1. **v0.6.0 发版**：push → 服务器 `git pull` + 应用 0008/0009 迁移 + `shinepick.sh update`（注意 /usr/local/bin/shinepick.sh 快照需手动 cp）→ **更换服务器 ADMIN_TOKEN（不再用默认值）** + 面板验证；APK 需重打包（设置页新增反馈入口）并按文件名 `shinepick-server-v0.6.0-android.apk` 传 apkserver。
+1. **v0.6.1 发版（服务端增量，无迁移/无 APK/无 Web）**：服务器 `git pull`（到含 v0.6.1 的提交）→ `shinepick.sh update`（仓库预编译二进制已同步刷新）→ 面板验证回收站/公告已读率/反馈回复。v0.6.0 已于 2026-11-08 发版并外网验证（检查更新返回 0.6.0、面板 200）。
 2. **生产化**：服务器 DB 密码/JWT_SECRET 仍默认；短信仍 mock（任何手机号 + 123456）；建议 Nginx + HTTPS + 域名；图片 URL 建议改存相对路径。
 3. 留存方向候选（v0.7）：本地打卡提醒（flutter_local_notifications）、拾光日历、年底年度回顾。
 4. S9 计划项：压测（P95<300ms）、防刷（设备指纹）、监控（Prometheus/Sentry）、审核误伤收敛（词库管理）。
